@@ -8,7 +8,48 @@
   <p>The products could not be loaded.</p>
   <button matButton="outlined" type="button" (click)="products.reload()">Retry</button>
 </div>
-} @else { @for (category of categories(); track category.slug) {
+} @else if (all().length === 0) {
+<p class="state">There are no products to show yet.</p>
+} @else {
+<div class="filters" role="search" aria-label="Products">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Search products</mat-label>
+    <input
+      #search
+      matInput
+      type="search"
+      autocomplete="off"
+      [value]="query()"
+      (input)="query.set(search.value)"
+      (keydown.escape)="query.set('')"
+    />
+    @if (query()) {
+    <button
+      matIconButton
+      matSuffix
+      type="button"
+      aria-label="Clear search"
+      (click)="clearSearch()"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M6 6l12 12M18 6 6 18" />
+      </svg>
+    </button>
+    }
+  </mat-form-field>
+  <mat-chip-listbox aria-label="Category" [value]="category()" (change)="selectCategory($event)">
+    <mat-chip-option value="">All <span class="count">{{ all().length }}</span></mat-chip-option>
+    @for (option of options(); track option.slug) {
+    <mat-chip-option [value]="option.slug"
+      >{{ option.label }} <span class="count">{{ option.products.length }}</span></mat-chip-option
+    >
+    }
+  </mat-chip-listbox>
+</div>
+<p class="results" aria-live="polite">
+  Showing {{ matches().length }} of {{ all().length }} products
+</p>
+@for (category of categories(); track category.slug) {
 <section [attr.aria-labelledby]="'category-' + category.slug">
   <h2 [id]="'category-' + category.slug">{{ category.label }}</h2>
   <ul class="grid">
@@ -57,5 +98,12 @@
   </ul>
 </section>
 } @empty {
-<p class="state">There are no products to show yet.</p>
+<div class="state">
+  <p>
+    No products match “{{ query().trim() }}”@if (category()) {
+    <span>&ngsp;in {{ categoryLabel() }}</span>
+    }.
+  </p>
+  <button matButton="outlined" type="button" (click)="clearFilters()">Clear filters</button>
+</div>
 } }

@@ -15,6 +15,41 @@
   margin: 0;
 }
 
+/* The search field above the category chips, which wrap onto as many lines as they need. */
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+mat-form-field {
+  width: 100%;
+  max-width: 28rem;
+}
+
+/* The field has its own clear button. */
+input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.filters svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.count {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.results {
+  margin: 1rem 0 0;
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+}
+
 h2 {
   margin: 2rem 0 0.75rem;
   font: var(--mat-sys-title-large);

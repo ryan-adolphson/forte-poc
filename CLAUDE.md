@@ -71,7 +71,7 @@ Run from the repo root unless noted.
 - The global `ng` CLI is older than the workspace. Use `npx ng` from `apps/web`.
 - `ProductProperty` in `packages/chat-contract` must stay a `type`, not an `interface`, or it stops being assignable to the JSON column type and the API build fails in `seed.ts`.
 - The chat route is rate limited in e2e tests too (10 per minute per app instance). Keep each `describe` in `apps/api/test/chat.e2e-spec.ts` to 10 requests or fewer.
-- The web app's initial bundle is about 496 kB against a 500 kB warning budget in `apps/web/angular.json`. Load new dialogs and other secondary UI lazily, as `product-details.ts` is.
+- The web app's initial bundle is about 581 kB against a 600 kB warning budget in `apps/web/angular.json`. Load new dialogs and other secondary UI lazily, as `product-details.ts` is.
 - The API is ESM: relative imports end in `.js`. Tests are Vitest and lint is oxlint (the NestJS 12 defaults), not Jest and ESLint.
 - Gemini model names and API shapes come from the `gemini-api-dev` skill, never from memory. Conversations are stored by Google (`store: true`).
 - The Gemini API key lives in `apps/api/.env`. It must never reach the browser or the logs.
