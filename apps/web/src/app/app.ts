@@ -1,3 +1,4 @@
+import { NgOptimizedImage } from '@angular/common';
 import { Component, inject, viewChild } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatSidenav, MatSidenavContainer, MatSidenavContent } from '@angular/material/sidenav';
@@ -16,6 +17,7 @@ import { ChatPanel } from './chat-panel';
     MatSidenavContainer,
     MatSidenavContent,
     MatToolbar,
+    NgOptimizedImage,
   ],
   selector: 'app-root',
   styleUrl: './app.css',

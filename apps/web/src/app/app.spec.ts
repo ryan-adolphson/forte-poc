@@ -78,7 +78,7 @@ describe('App', () => {
 
   it('is a landing page with the catalogue and a closed chat panel', async () => {
     expect(root.querySelectorAll('h1')).toHaveLength(1);
-    expect(root.querySelector('h1')!.textContent).toContain('Forte');
+    expect(root.querySelector('h1 img')!.getAttribute('alt')).toBe('Forte');
     expect(root.querySelector('main')!.textContent).toContain('ask Forte');
     expect(root.querySelectorAll('main mat-card')).toHaveLength(3);
     expect(headerButton().textContent).toContain('Ask Forte');

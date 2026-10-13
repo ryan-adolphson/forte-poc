@@ -30,10 +30,15 @@ mat-toolbar {
   border-bottom: 1px solid var(--mat-sys-outline-variant);
 }
 
-/* The wordmark in the logo's slate grey. */
+/* The heading is the logo mark; flex centres the image in the toolbar without a line box. */
 h1 {
+  display: flex;
   margin: 0;
-  color: var(--mat-sys-secondary);
+}
+
+/* The same corner rounding as the product icon tiles. */
+h1 img {
+  border-radius: 20%;
 }
 
 .spacer {
