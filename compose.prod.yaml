@@ -1,0 +1,43 @@
+# Production overlay: HTTPS in front of the stack on a single server.
+#   docker compose -f compose.yaml -f compose.prod.yaml up -d --wait
+# Deployed by deploy/deploy.sh. SITE_HOST comes from the .env file next to this one.
+#
+#   browser --HTTPS--> caddy (80/443) --> web (nginx :8080) --> api (:3000) --> postgres
+
+services:
+  # Terminates TLS and gets its certificate by itself (Let's Encrypt for a real
+  # hostname, Caddy's own local CA for `localhost`). The only publicly published ports.
+  caddy:
+    image: caddy:2.11-alpine
+    environment:
+      SITE_HOST: ${SITE_HOST:?Set SITE_HOST to the public hostname, for example SITE_HOST=forte.duckdns.org in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates and keys. Losing this volume means asking Let's Encrypt again.
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    environment:
+      # The site is HTTPS only, so the session cookie is marked Secure.
+      COOKIE_SECURE: "true"
+      # Two proxies in front (Caddy, then nginx). Caddy replaces any X-Forwarded-For the
+      # client sent with the real client address and nginx appends Caddy's address, so
+      # the client is the second address from the right.
+      TRUST_PROXY: "2"
+
+  # Come back after a reboot, as `api` and `web` already do in compose.yaml.
+  # `migrate` is a one-off and must not restart.
+  postgres:
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:

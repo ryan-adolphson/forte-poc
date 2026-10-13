@@ -53,6 +53,7 @@ Delegate work to the agent that owns the area.
 - `packages/chat-contract`: types shared by both apps (declarations only, import with `import type`).
 - `compose.yaml`: dev Postgres on port 5434, plus `migrate` (migrations and seed), `api` and `web` (nginx). There are no profiles: `docker compose up --build` runs the whole stack on http://localhost:8088. Dockerfiles are in `apps/api` and `apps/web`, built with the repo root as context.
 
+- `compose.prod.yaml`, `deploy/`: HTTPS overlay (Caddy) and scripts for the single-Droplet deployment; see "Deploy to a Droplet" in the README. Never run `deploy/deploy.sh` or connect to the server without asking first.
 - `apps/api/src/documents`: data sheet access (`DocumentsService`), the ingestion script, `GET /api/documents` (the current revision of every data sheet of a visible product) and `GET /api/documents/:documentNumber/file`, which serves the current PDF. Links to a PDF are built by `documentUrl()` in `document-url.ts`.
 - `sample-documents`: example product data sheet PDFs, loaded into `documents` by `db:ingest-docs`. `manifest.json` lists each file's SKU, revision, issue date and whether it is the current revision; two products have three revisions (A, B, C) whose older values differ from the catalogue on purpose.
 

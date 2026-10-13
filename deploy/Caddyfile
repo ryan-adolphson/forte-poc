@@ -1,0 +1,7 @@
+# HTTPS front for the stack. Mounted into the caddy service by compose.prod.yaml.
+# Caddy redirects HTTP to HTTPS and obtains and renews the certificate by itself.
+# No compression here: nginx gzips the static files, and the chat stream
+# (text/event-stream, which Caddy flushes event by event) must not be buffered.
+{$SITE_HOST} {
+	reverse_proxy web:8080
+}
