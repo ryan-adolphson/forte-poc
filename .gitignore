@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+.angular/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store
+npm-debug.log*
+
+# Copies of the Prisma skill for other tools (written by `prisma skills sync`)
+apps/api/.agents/
+apps/api/.cursor/
+apps/api/.devin/

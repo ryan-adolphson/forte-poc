@@ -1,0 +1,18 @@
+// use prisma-8
+
+// The only table the assistant can search. Columns are snake_case in the database.
+model Product {
+  id           Int                        @id @default(autoincrement())
+  sku          String                     @unique
+  name         String
+  category     String
+  description  String
+  // The bot only ever sees rows where this is true. Enforced in ProductsService.
+  visibleToBot Boolean                    @default(true) @map("visible_to_bot")
+  // JSON list of { name, value, unit?, standard? }. See ProductProperty in src/products.
+  properties   Jsonb
+  createdAt    TimestamptzString          @default(now()) @map("created_at")
+  updatedAt    temporal.updatedAtString() @map("updated_at")
+
+  @@map("products")
+}
