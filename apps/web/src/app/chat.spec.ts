@@ -99,6 +99,8 @@ describe('Chat', () => {
     await stream.emit('text', { delta: 'x' });
     expect(chat.activity()).toBeNull();
 
+    await stream.emit('tool', { name: 'list_products', status: 'started' });
+    expect(chat.activity()).toBe('Listing the catalogue…');
     await stream.emit('tool', { name: 'list_categories', status: 'started' });
     expect(chat.activity()).toBe('Checking the product categories…');
     await stream.emit('done', { interactionId: 'int-1', usage: null });

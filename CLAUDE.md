@@ -48,9 +48,9 @@ Delegate work to the agent that owns the area.
 - `apps/api`: NestJS 12 API. Chat module in `src/chat` (SSE endpoint `POST /api/chat/stream`, Gemini loop, tools in `src/chat/tools`), bot data access in `src/products`.
 - `apps/web`: Angular 22 app. One chat page; the stream client is in `src/app/chat.ts` and `src/app/sse-parser.ts`. The dev server proxies `/api` to the API. Model output is rendered as plain text, never as HTML.
 - `packages/chat-contract`: types shared by both apps (declarations only, import with `import type`).
-- `compose.yaml`: dev Postgres on port 5434.
+- `compose.yaml`: dev Postgres on port 5434, plus `migrate` (migrations and seed), `api` and `web` (nginx). There are no profiles: `docker compose up --build` runs the whole stack on http://localhost:8088. Dockerfiles are in `apps/api` and `apps/web`, built with the repo root as context.
 
-Not built yet: sign-in, saved conversations, document search, and Docker images for the apps. The chat endpoint is unauthenticated and rate limited per client IP.
+Not built yet: sign-in, saved conversations and document search. The chat endpoint is unauthenticated and rate limited per client IP.
 
 ## Commands
 
@@ -71,6 +71,8 @@ Run from the repo root unless noted.
 - The API is ESM: relative imports end in `.js`. Tests are Vitest and lint is oxlint (the NestJS 12 defaults), not Jest and ESLint.
 - Gemini model names and API shapes come from the `gemini-api-dev` skill, never from memory. Conversations are stored by Google (`store: true`).
 - The Gemini API key lives in `apps/api/.env`. It must never reach the browser or the logs.
-- Stop the dev database with `npm run db:down`, which keeps its data. `docker compose down -v` deletes it.
+- Stop the dev database with `npm run db:down`, which keeps its data. `docker compose down` stops the Docker stack and the dev database together; `docker compose down -v` deletes the data. Never run `down -v` without asking.
+- The Docker stack shares the dev database. Its `migrate` job applies the migrations in the working tree and re-runs the seed on every `up`.
+- `docker compose config` prints the Gemini key in clear text, because it expands `apps/api/.env`. Do not run it with visible output.
 - e2e tests run against the dev database, migrated and seeded. Do not modify the seeded `products` rows in tests.
 - Do not commit unless asked.

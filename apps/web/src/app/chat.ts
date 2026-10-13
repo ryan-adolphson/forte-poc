@@ -19,6 +19,7 @@ export type ChatStatus = 'idle' | 'sending' | 'streaming';
 const TOOL_LABELS: Record<string, string> = {
   search_products: 'Searching the catalogue…',
   get_product: 'Looking up product details…',
+  list_products: 'Listing the catalogue…',
   list_categories: 'Checking the product categories…',
 };
 

@@ -16,6 +16,7 @@ describe('validateEnv', () => {
       geminiModel: 'gemini-3.8-flash',
       chatRateLimit: 10,
       chatRateTtlSeconds: 60,
+      trustProxy: 0,
     });
   });
 
@@ -37,5 +38,15 @@ describe('validateEnv', () => {
     expect(() => validateEnv({ DATABASE_URL, CHAT_RATE_LIMIT: 'ten' })).toThrow(
       /CHAT_RATE_LIMIT must be a positive integer/,
     );
+  });
+
+  it('reads TRUST_PROXY as a non-negative integer', () => {
+    expect(validateEnv({ DATABASE_URL, TRUST_PROXY: '1' }).trustProxy).toBe(1);
+    expect(validateEnv({ DATABASE_URL, TRUST_PROXY: '0' }).trustProxy).toBe(0);
+    for (const bad of ['-1', '1.5', 'true']) {
+      expect(() => validateEnv({ DATABASE_URL, TRUST_PROXY: bad })).toThrow(
+        /TRUST_PROXY must be a non-negative integer/,
+      );
+    }
   });
 });

@@ -86,7 +86,7 @@ describe('ChatService.run', () => {
     const second = gemini.requests[1]!;
     expect(second.previous_interaction_id).toBe('v1_a');
     expect(second.system_instruction).toBe(SYSTEM_PROMPT);
-    expect(second.tools).toHaveLength(3);
+    expect(second.tools).toHaveLength(4);
     expect(second.input).toEqual([
       {
         type: 'function_result',

@@ -11,7 +11,7 @@ This is a proof of concept.
 | `apps/api` | NestJS 12 API: the product catalogue, the chat stream, Gemini tool calling |
 | `apps/web` | Angular 22 single-page chat app |
 | `packages/chat-contract` | Request and event types shared by both apps (declarations only) |
-| `compose.yaml` | PostgreSQL for development |
+| `compose.yaml` | PostgreSQL for development, and the whole stack with `docker compose up` |
 
 Not built yet: sign-in, saved conversations and document search.
 
@@ -50,6 +50,38 @@ npm run web:dev    # web app on http://localhost:4200, proxies /api to the API
 ```
 
 Open <http://localhost:4200>. `npm run db:down` stops the database and keeps its data.
+
+## Run everything in Docker
+
+One command builds and runs the whole stack: PostgreSQL, a one-off `migrate` job (migrations, then
+the sample products), the API, and nginx serving the web app and proxying `/api/` to the API.
+
+```bash
+docker compose up --build    # add -d --wait to run it in the background
+```
+
+Open <http://localhost:8088>. Only the web port is published, on `127.0.0.1`. To use another port:
+`WEB_PORT=9090 docker compose up --build`.
+
+```bash
+docker compose logs -f api web          # follow the API and nginx
+docker compose logs migrate             # migration and seed output
+docker compose up --build -d --wait     # rebuild after code changes
+docker compose stop migrate api web && docker compose rm -f migrate api web   # stop the stack, keep the database running
+docker compose down                     # stop everything, keep the data
+```
+
+Things to know:
+
+- The Gemini key is read from `apps/api/.env` when the API container starts. It is never copied
+  into an image. Without that file the stack still starts, and the assistant answers with a
+  `not_configured` error. `DATABASE_URL` and `PORT` in that file are ignored here; Compose sets them.
+- `docker compose config` prints the key in clear text. Do not paste its output anywhere.
+- The stack uses the same `postgres` service and data as development. Each `up` applies the
+  migrations in your working tree and re-runs the seed; both are safe to repeat.
+- `docker compose down -v` deletes the database volume, and with it all local data.
+- The API sits behind one proxy, so Compose sets `TRUST_PROXY=1` to rate limit by the client's
+  address instead of nginx's. On Docker Desktop every browser on the host still shares one address.
 
 ## Chat endpoint
 

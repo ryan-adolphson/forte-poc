@@ -7,13 +7,14 @@ function optional(env: Env, name: string): string | undefined {
   return value === '' ? undefined : value;
 }
 
-function integer(env: Env, name: string, fallback: number): number {
+function integer(env: Env, name: string, fallback: number, min = 1): number {
   const value = optional(env, name);
   if (value === undefined) return fallback;
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
+  if (!Number.isInteger(parsed) || parsed < min) {
     // The value is deliberately left out of the message: never echo env values.
-    throw new Error(`Invalid environment: ${name} must be a positive integer`);
+    const kind = min === 0 ? 'a non-negative' : 'a positive';
+    throw new Error(`Invalid environment: ${name} must be ${kind} integer`);
   }
   return parsed;
 }
@@ -33,6 +34,8 @@ export function validateEnv(env: Env) {
     geminiModel: optional(env, 'GEMINI_MODEL') ?? 'gemini-3.8-flash',
     chatRateLimit: integer(env, 'CHAT_RATE_LIMIT', 10),
     chatRateTtlSeconds: integer(env, 'CHAT_RATE_TTL_SECONDS', 60),
+    /** Reverse proxies in front of the API whose `X-Forwarded-For` is trusted. 0 = none. */
+    trustProxy: integer(env, 'TRUST_PROXY', 0, 0),
   };
 }
 

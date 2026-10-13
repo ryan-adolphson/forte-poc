@@ -151,6 +151,31 @@ describe('ProductsService', () => {
     });
   });
 
+  describe('listAll', () => {
+    it('returns exactly the visible products as sku, name and category, uncapped', async () => {
+      const results = await products.listAll();
+
+      expect(results).toHaveLength(19);
+      expect(results.map((product) => product.sku).sort()).toEqual(
+        visible.map((product) => product.sku).sort(),
+      );
+      for (const product of results) {
+        expect(Object.keys(product).sort()).toEqual(['category', 'name', 'sku']);
+        expect(hiddenSkus).not.toContain(product.sku);
+      }
+    });
+
+    it('orders by category, then name, like search', async () => {
+      const results = await products.listAll();
+      expect(results.map((product) => product.sku)).toEqual(
+        (await products.search()).map((product) => product.sku),
+      );
+      expect(results.map((product) => product.category)).toEqual(
+        results.map((product) => product.category).sort(),
+      );
+    });
+  });
+
   describe('listCategories', () => {
     it('returns the categories that have visible products', async () => {
       expect(await products.listCategories()).toEqual([

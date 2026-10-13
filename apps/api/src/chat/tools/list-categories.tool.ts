@@ -5,9 +5,10 @@ export const listCategoriesTool: ChatTool = {
     type: 'function',
     name: 'list_categories',
     description:
-      "Lists the product categories in Forte's catalogue. Use it when the user asks what Forte " +
-      'sells, or before search_products when you need the exact category name. Returns ' +
-      '{ categories: string[] }, sorted. Takes no arguments.',
+      "Lists the names of the product categories in Forte's catalogue, without the products in " +
+      'them. Use it when only the category names are needed: the user asks which categories ' +
+      'exist, or you need the exact category name for search_products. To see the products as ' +
+      'well, use list_products instead. Returns { categories: string[] }, sorted. Takes no arguments.',
     parameters: { type: 'object', properties: {} },
   },
 

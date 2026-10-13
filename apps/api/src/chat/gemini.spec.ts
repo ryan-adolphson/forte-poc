@@ -2,7 +2,7 @@ import { buildGeminiRequest } from './gemini.js';
 import { SYSTEM_PROMPT } from './system-prompt.js';
 
 describe('buildGeminiRequest', () => {
-  const toolNames = ['search_products', 'get_product', 'list_categories'];
+  const toolNames = ['search_products', 'get_product', 'list_products', 'list_categories'];
 
   it('builds a first turn with the system instruction, tools, store and stream', () => {
     const request = buildGeminiRequest({ model: 'gemini-3.8-flash', input: 'hello' });
@@ -30,7 +30,7 @@ describe('buildGeminiRequest', () => {
 
     expect(request.previous_interaction_id).toBe('v1_abc');
     expect(request.system_instruction).toBe(SYSTEM_PROMPT);
-    expect(request.tools).toHaveLength(3);
+    expect(request.tools).toHaveLength(4);
   });
 
   it('keeps the system prompt free of catalogue data', () => {

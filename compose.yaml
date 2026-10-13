@@ -1,5 +1,8 @@
 name: forte-search
 
+# `docker compose up --build` runs the whole stack on http://localhost:8088.
+# `npm run db:up` starts only postgres, for development on the host.
+
 services:
   postgres:
     image: postgres:17
@@ -16,6 +19,62 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
+
+  # One-off job: applies migrations, then loads the sample products. Safe on every `up`.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: migrate
+    environment:
+      DATABASE_URL: postgresql://forte:forte@postgres:5432/forte_search
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    # GEMINI_API_KEY and the other optional settings come from the developer's own
+    # apps/api/.env. Without that file the stack still starts and chat answers `not_configured`.
+    env_file:
+      - path: apps/api/.env
+        required: false
+    # `environment` wins over `env_file`, so the localhost values in .env cannot apply here.
+    environment:
+      DATABASE_URL: postgresql://forte:forte@postgres:5432/forte_search
+      PORT: 3000
+      # One proxy (nginx in `web`) sits in front: rate limit by the address it reports.
+      TRUST_PROXY: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8088}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
 
 volumes:
   postgres-data:

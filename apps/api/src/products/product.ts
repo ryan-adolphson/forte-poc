@@ -18,3 +18,6 @@ export type Product = {
   description: string;
   properties: ProductProperty[];
 };
+
+/** The compact form used to list the whole catalogue. */
+export type ProductSummary = Pick<Product, 'sku' | 'name' | 'category'>;

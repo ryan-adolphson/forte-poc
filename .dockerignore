@@ -1,0 +1,32 @@
+# Keeps the build context small and keeps secrets out of it.
+# Both Dockerfiles build from the repository root, so this one file covers them.
+
+# Secrets and local configuration: never in a build context.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Installed and generated output: always rebuilt inside the image.
+**/node_modules
+**/dist
+**/coverage
+**/.angular
+**/*.tsbuildinfo
+
+# Version control, editor and agent tooling.
+.git
+.gitignore
+**/.claude
+**/.agents
+**/.cursor
+**/.devin
+**/.mcp.json
+**/.DS_Store
+**/npm-debug.log*
+**/*.log
+
+# Not needed to build either image.
+**/*.md
+**/Dockerfile
+.dockerignore
+compose.yaml

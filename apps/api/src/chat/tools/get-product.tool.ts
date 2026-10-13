@@ -6,7 +6,7 @@ export const getProductTool: ChatTool = {
     name: 'get_product',
     description:
       'Fetches one product by its exact SKU. Use it when the user gives a SKU or when you ' +
-      'already know the SKU from an earlier search and need its current details. Returns ' +
+      'already know the SKU from search_products or list_products and need its details. Returns ' +
       '{ found: true, product } with sku, name, category, description and all properties ' +
       '(name, value, unit, standard), or { found: false } when the catalogue has no product ' +
       'with that SKU. To find a product by name or keyword, use search_products instead.',

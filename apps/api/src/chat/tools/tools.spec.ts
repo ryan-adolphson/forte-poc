@@ -3,6 +3,7 @@ import type { Product } from '../../products/product.js';
 import { getProductTool } from './get-product.tool.js';
 import { chatTools } from './index.js';
 import { listCategoriesTool } from './list-categories.tool.js';
+import { listProductsTool } from './list-products.tool.js';
 import { searchProductsTool } from './search-products.tool.js';
 
 const product: Product = {
@@ -17,16 +18,22 @@ function fakeProducts() {
   const mock = {
     search: vi.fn().mockResolvedValue([product]),
     getBySku: vi.fn().mockResolvedValue(product),
+    listAll: vi.fn().mockResolvedValue([
+      { sku: 'FRT-CON-C2530', name: 'Ready-Mix Concrete C25/30', category: 'concrete' },
+      { sku: 'FRT-CON-C3240', name: 'Ready-Mix Concrete C32/40', category: 'concrete' },
+      { sku: 'FRT-TIM-C24', name: 'Structural Softwood C24 47 x 195', category: 'timber' },
+    ]),
     listCategories: vi.fn().mockResolvedValue(['concrete', 'timber']),
   };
   return { mock, service: mock as unknown as ProductsService };
 }
 
 describe('chat tools', () => {
-  it('registers three uniquely named function declarations', () => {
+  it('registers four uniquely named function declarations', () => {
     expect(chatTools.map((tool) => tool.declaration.name)).toEqual([
       'search_products',
       'get_product',
+      'list_products',
       'list_categories',
     ]);
     for (const tool of chatTools) {
@@ -94,6 +101,43 @@ describe('chat tools', () => {
 
       expect(result).toEqual({ ok: false, error: expect.stringMatching(message) });
       expect(mock.getBySku).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('list_products', () => {
+    it('returns every product grouped by category and ignores any arguments', async () => {
+      const { mock, service } = fakeProducts();
+      const result = await listProductsTool.run({ anything: true }, service);
+
+      expect(mock.listAll).toHaveBeenCalledWith();
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          total: 3,
+          categories: [
+            {
+              category: 'concrete',
+              products: [
+                { sku: 'FRT-CON-C2530', name: 'Ready-Mix Concrete C25/30' },
+                { sku: 'FRT-CON-C3240', name: 'Ready-Mix Concrete C32/40' },
+              ],
+            },
+            {
+              category: 'timber',
+              products: [{ sku: 'FRT-TIM-C24', name: 'Structural Softwood C24 47 x 195' }],
+            },
+          ],
+        },
+      });
+    });
+
+    it('returns an empty catalogue as total 0', async () => {
+      const { mock, service } = fakeProducts();
+      mock.listAll.mockResolvedValue([]);
+      expect(await listProductsTool.run({}, service)).toEqual({
+        ok: true,
+        data: { total: 0, categories: [] },
+      });
     });
   });
 

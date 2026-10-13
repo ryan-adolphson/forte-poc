@@ -55,6 +55,13 @@ const cases: EvalCase[] = [
     tools: 'required',
     mustContain: ['timber', 'insulation', 'masonry'],
   },
+  {
+    name: 'list the whole catalogue',
+    message: 'What products do you sell?',
+    tools: 'required',
+    mustContain: ['C32/40', 'Glulam', 'PIR Insulation Board', 'Clay Facing Brick'],
+    mustNotContain: ['Heritage', 'H28', 'Kestrel', 'KT-07', 'KT07'],
+  },
 
   // Out of scope: must be declined.
   {

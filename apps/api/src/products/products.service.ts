@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { or } from '@prisma/orm-postgres/orm-client';
 import { PrismaService } from '../prisma/prisma.service.js';
-import type { Product, ProductProperty } from './product.js';
+import type { Product, ProductProperty, ProductSummary } from './product.js';
 
 const MAX_RESULTS = 25;
 
@@ -59,6 +59,14 @@ export class ProductsService {
       .select('sku', 'name', 'category', 'description', 'properties')
       .first();
     return row === null ? null : toProduct(row);
+  }
+
+  /** Every visible product as sku, name and category, by category then name. Not capped. */
+  async listAll(): Promise<ProductSummary[]> {
+    return this.visible()
+      .select('sku', 'name', 'category')
+      .orderBy([(p) => p.category.asc(), (p) => p.name.asc()])
+      .all();
   }
 
   /** Distinct categories that have at least one visible product, sorted. */
