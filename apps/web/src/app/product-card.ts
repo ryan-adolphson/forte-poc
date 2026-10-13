@@ -8,14 +8,17 @@ import {
 } from '@angular/material/card';
 import type { Product } from '@forte/chat-contract';
 import { categoryLabel } from './category-label';
+import { ProductIcon } from './product-icon';
 
 /** The compact card at the top of the chat panel: the product the conversation is about. */
 @Component({
-  imports: [MatCard, MatCardContent, MatCardHeader, MatCardSubtitle, MatCardTitle],
+  imports: [MatCard, MatCardContent, MatCardHeader, MatCardSubtitle, MatCardTitle, ProductIcon],
   selector: 'app-product-card',
   template: `
     <mat-card appearance="outlined">
       <mat-card-header>
+        <!-- The attribute alone puts the icon in the header's leading slot, before the text. -->
+        <app-product-icon mat-card-avatar [category]="product().category" />
         <h3 mat-card-title>{{ product().name }}</h3>
         <mat-card-subtitle>{{ product().sku }} · {{ category() }}</mat-card-subtitle>
       </mat-card-header>
@@ -42,7 +45,13 @@ import { categoryLabel } from './category-label';
     }
 
     mat-card-header {
+      gap: 0.75rem;
       padding: 0.75rem 1rem 0;
+    }
+
+    app-product-icon {
+      width: 2rem;
+      height: 2rem;
     }
 
     h3 {

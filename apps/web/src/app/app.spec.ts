@@ -107,6 +107,54 @@ describe('App', () => {
     });
   });
 
+  it('opens the panel for a product from its details dialog, and focuses the message box', async () => {
+    const opener = root.querySelector<HTMLButtonElement>(
+      '[aria-label="View details of Rebar B500B 12 mm"]',
+    )!;
+    opener.focus();
+    opener.click();
+    const dialog = () => document.querySelector<HTMLElement>('mat-dialog-container');
+    await vi.waitFor(() => expect(dialog()).not.toBeNull()); // its code is imported on the click
+    await fixture.whenStable();
+    expect(dialog()!.contains(document.activeElement)).toBe(true);
+
+    const askButton = [...dialog()!.querySelectorAll('button')].find(
+      (b) => b.textContent.trim() === 'Ask Forte',
+    )!;
+    await click(askButton);
+
+    // The dialog closes first and returns focus to its opener; then the panel opens.
+    await vi.waitFor(() => expect(document.activeElement).toBe(textarea()));
+    expect(dialog()).toBeNull();
+    expect(await (await panel()).isOpen()).toBe(true);
+    expect(productCard()!.textContent).toContain('Rebar B500B 12 mm');
+    expect(productCard()!.querySelector('app-product-icon svg')).not.toBeNull();
+
+    // Closing the panel returns focus to the button that opened the dialog.
+    await click(closeButton());
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it('closes the details dialog on Escape, returning focus to its View details button', async () => {
+    const opener = root.querySelector<HTMLButtonElement>(
+      '[aria-label="View details of Rebar B500B 12 mm"]',
+    )!;
+    opener.focus();
+    opener.click();
+    const dialog = () => document.querySelector<HTMLElement>('mat-dialog-container');
+    await vi.waitFor(() => expect(dialog()).not.toBeNull());
+    await fixture.whenStable();
+
+    document.activeElement!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }),
+    );
+    await settle();
+    await fixture.whenStable();
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(opener);
+    expect(await (await panel()).isOpen()).toBe(false);
+  });
+
   it('opens the panel from the header with no product card', async () => {
     await click(headerButton());
 

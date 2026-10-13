@@ -1,6 +1,6 @@
 import { SlicePipe } from '@angular/common';
 import { httpResource } from '@angular/common/http';
-import { Component, computed, output } from '@angular/core';
+import { Component, Injector, computed, inject, output } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import {
   MatCard,
@@ -13,6 +13,7 @@ import {
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import type { Product, ProductListResponse } from '@forte/chat-contract';
 import { categoryLabel } from './category-label';
+import { ProductIcon } from './product-icon';
 
 interface Category {
   slug: string;
@@ -30,6 +31,7 @@ interface Category {
     MatCardSubtitle,
     MatCardTitle,
     MatProgressSpinner,
+    ProductIcon,
     SlicePipe,
   ],
   selector: 'app-catalogue',
@@ -37,8 +39,11 @@ interface Category {
   templateUrl: './catalogue.html',
 })
 export class Catalogue {
-  /** The user clicked "Ask Forte" on this product. */
+  /** The user clicked "Ask Forte" on this product, on its card or in its details dialog. */
   readonly ask = output<Product>();
+
+  private readonly injector = inject(Injector);
+  private opening = false;
 
   protected readonly products = httpResource<ProductListResponse>(() => '/api/products');
 
@@ -60,4 +65,24 @@ export class Catalogue {
     }
     return categories;
   });
+
+  /** Opens the details dialog. Its code, and Material's dialog, load on the first click. */
+  protected async viewDetails(product: Product): Promise<void> {
+    if (this.opening) {
+      return; // a second click while the dialog's code is still loading
+    }
+    this.opening = true;
+    try {
+      const { openProductDetails } = await import('./product-details');
+      openProductDetails(this.injector, product)
+        .afterClosed()
+        .subscribe((ask) => {
+          if (ask) {
+            this.ask.emit(product);
+          }
+        });
+    } finally {
+      this.opening = false;
+    }
+  }
 }

@@ -16,6 +16,8 @@
     <li>
       <mat-card appearance="outlined">
         <mat-card-header>
+          <!-- The attribute alone puts the icon in the header's leading slot, before the text. -->
+          <app-product-icon mat-card-avatar [category]="product.category" />
           <h3 mat-card-title>{{ product.name }}</h3>
           <mat-card-subtitle>{{ product.sku }}</mat-card-subtitle>
         </mat-card-header>
@@ -32,6 +34,14 @@
           </dl>
         </mat-card-content>
         <mat-card-actions align="end">
+          <button
+            matButton
+            type="button"
+            [attr.aria-label]="'View details of ' + product.name"
+            (click)="viewDetails(product)"
+          >
+            View details
+          </button>
           <button
             matButton="tonal"
             type="button"

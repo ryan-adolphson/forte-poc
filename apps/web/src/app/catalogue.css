@@ -34,6 +34,10 @@ mat-card {
   height: 100%;
 }
 
+mat-card-header {
+  gap: 0.75rem;
+}
+
 h3 {
   margin: 0;
   font: var(--mat-sys-title-medium);
@@ -57,6 +61,11 @@ mat-card-content {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   line-clamp: 3;
+}
+
+mat-card-actions {
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 dl,
