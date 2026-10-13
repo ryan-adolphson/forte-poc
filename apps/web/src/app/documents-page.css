@@ -1,0 +1,171 @@
+@import './page.css';
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 3rem 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.state p {
+  margin: 0;
+}
+
+.filters {
+  margin-top: 1.25rem;
+}
+
+mat-form-field {
+  width: 100%;
+  max-width: 28rem;
+}
+
+/* The field has its own clear button. */
+input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.filters svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.results {
+  margin: 1rem 0 0;
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+table {
+  width: 100%;
+  margin-top: 0.5rem;
+  border-collapse: collapse;
+  font: var(--mat-sys-body-medium);
+}
+
+th,
+td {
+  padding: 0.625rem 1rem 0.625rem 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  font-weight: inherit;
+  text-align: start;
+}
+
+th:last-child,
+td:last-child {
+  padding-right: 0;
+}
+
+thead th {
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+/* The category, above its documents. */
+.group th {
+  padding-top: 1.5rem;
+  font: var(--mat-sys-title-medium);
+}
+
+.product {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font: var(--mat-sys-title-small);
+}
+
+app-product-icon {
+  width: 2rem;
+  height: 2rem;
+}
+
+.sku {
+  display: block;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+td {
+  white-space: nowrap;
+}
+
+/* How many revisions exist, under the current one. */
+.versions {
+  display: block;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+a {
+  color: var(--mat-sys-primary);
+  text-underline-offset: 2px;
+}
+
+a:focus-visible {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: 2px;
+  border-radius: var(--mat-sys-corner-extra-small);
+}
+
+/* On a narrow screen each document is a block: the product, then its details on one line. */
+@media (max-width: 40rem) {
+  thead {
+    position: absolute;
+    clip-path: inset(50%);
+  }
+
+  table,
+  tbody,
+  .group,
+  .group th {
+    display: block;
+  }
+
+  tr:not(.group) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  tr:not(.group) > * {
+    padding: 0;
+    border: 0;
+  }
+
+  th[scope='row'] {
+    flex: 1 0 100%;
+  }
+
+  /* On the details line the count follows its revision: Rev C · 3 versions. */
+  .versions {
+    display: inline;
+  }
+
+  .versions::before {
+    content: '· ';
+  }
+
+  .issued::before {
+    content: 'Issued ';
+  }
+
+  .open {
+    margin-left: auto;
+  }
+}

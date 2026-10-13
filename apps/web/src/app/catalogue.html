@@ -51,7 +51,7 @@
 </p>
 @for (category of categories(); track category.slug) {
 <section [attr.aria-labelledby]="'category-' + category.slug">
-  <h2 [id]="'category-' + category.slug">{{ category.label }}</h2>
+  <h3 [id]="'category-' + category.slug">{{ category.label }}</h3>
   <ul class="grid">
     @for (product of category.products; track product.sku) {
     <li>
@@ -59,7 +59,7 @@
         <mat-card-header>
           <!-- The attribute alone puts the icon in the header's leading slot, before the text. -->
           <app-product-icon mat-card-avatar [category]="product.category" />
-          <h3 mat-card-title>{{ product.name }}</h3>
+          <h4 mat-card-title>{{ product.name }}</h4>
           <mat-card-subtitle>{{ product.sku }}</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>

@@ -49,11 +49,11 @@ Delegate work to the agent that owns the area.
 ## Layout
 
 - `apps/api`: NestJS 12 API. Chat module in `src/chat` (SSE endpoint `POST /api/chat/stream`, Gemini loop, tools in `src/chat/tools`), bot data access in `src/products`.
-- `apps/web`: Angular 22 app with Angular Material 22 (Material 3 theme in `src/styles.scss`, generated from the Forte logo's green `#3aab2c` and slate `#5a636b`; colours come only from `--mat-sys-*` tokens). The home page is a product catalogue (`src/app/catalogue.ts`); each product card and the header open an "Ask Forte" chat side panel (`src/app/chat-panel.ts`) with a card for the selected product. The stream client is in `src/app/chat.ts` and `src/app/sse-parser.ts`. The dev server proxies `/api` to the API. Model output is rendered as plain text, never as HTML.
+- `apps/web`: Angular 22 app with Angular Material 22 (Material 3 theme in `src/styles.scss`, generated from the Forte logo's green `#3aab2c` and slate `#5a636b`; colours come only from `--mat-sys-*` tokens). A left navigation leads to three lazy routes in `src/app/app.routes.ts`: `/products` (default, the catalogue in `catalogue.ts`), `/documents` (the current revision of every data sheet, from `GET /api/documents`) and `/forte-ai` (the assistant as a full page for general questions). "Ask Forte" on a product opens a right-hand chat panel for that product (`ChatDrawer`). The `Chat` service holds one conversation at a time, shared by the panel and the Forte AI page, both rendered by `chat-panel.ts`. The stream client is in `src/app/chat.ts` and `src/app/sse-parser.ts`. The dev server proxies `/api` to the API. Model output is rendered as plain text, never as HTML.
 - `packages/chat-contract`: types shared by both apps (declarations only, import with `import type`).
 - `compose.yaml`: dev Postgres on port 5434, plus `migrate` (migrations and seed), `api` and `web` (nginx). There are no profiles: `docker compose up --build` runs the whole stack on http://localhost:8088. Dockerfiles are in `apps/api` and `apps/web`, built with the repo root as context.
 
-- `apps/api/src/documents`: data sheet access (`DocumentsService`), the ingestion script, and `GET /api/documents/:documentNumber/file`, which serves the current PDF.
+- `apps/api/src/documents`: data sheet access (`DocumentsService`), the ingestion script, `GET /api/documents` (the current revision of every data sheet of a visible product) and `GET /api/documents/:documentNumber/file`, which serves the current PDF. Links to a PDF are built by `documentUrl()` in `document-url.ts`.
 - `sample-documents`: example product data sheet PDFs, loaded into `documents` by `db:ingest-docs`. `manifest.json` lists each file's SKU, revision, issue date and whether it is the current revision; two products have three revisions (A, B, C) whose older values differ from the catalogue on purpose.
 
 Not built yet: sign-in, saved conversations, and reading or comparing past revisions of a document. The chat endpoint is unauthenticated and rate limited per client IP.
@@ -76,7 +76,7 @@ Run from the repo root unless noted.
 - The global `ng` CLI is older than the workspace. Use `npx ng` from `apps/web`.
 - `ProductProperty` in `packages/chat-contract` must stay a `type`, not an `interface`, or it stops being assignable to the JSON column type and the API build fails in `seed.ts`.
 - The chat route is rate limited in e2e tests too (10 per minute per app instance). Keep each `describe` in `apps/api/test/chat.e2e-spec.ts` to 10 requests or fewer.
-- The web app's initial bundle is about 581 kB against a 600 kB warning budget in `apps/web/angular.json`. Load new dialogs and other secondary UI lazily, as `product-details.ts` is.
+- The web app's initial bundle is about 497 kB against a 600 kB warning budget in `apps/web/angular.json`, because each page is a lazy route. Load new dialogs and other secondary UI lazily, as `product-details.ts` is.
 - The API is ESM: relative imports end in `.js`. Tests are Vitest and lint is oxlint (the NestJS 12 defaults), not Jest and ESLint.
 - Gemini model names and API shapes come from the `gemini-api-dev` skill, never from memory. Conversations are stored by Google (`store: true`).
 - The Gemini API key lives in `apps/api/.env`. It must never reach the browser or the logs.
@@ -84,5 +84,5 @@ Run from the repo root unless noted.
 - The Docker stack shares the dev database. Its `migrate` job applies the migrations in the working tree and re-runs the seed on every `up`.
 - `docker compose config` prints the Gemini key in clear text, because it expands `apps/api/.env`. Do not run it with visible output.
 - e2e tests run against the dev database, migrated, seeded and with the data sheets ingested. Do not modify the seeded `products` rows in tests.
-- `test/documents.e2e-spec.ts` writes rows numbered `TEST-DS-<run>-…` and deletes them afterwards. While it runs, the current data sheet of `FRT-MAS-AAC100` is a fake, so do not assert on that SKU's data sheet in other e2e files.
+- `test/documents.e2e-spec.ts` writes rows numbered `TEST-DS-<run>-…` and deletes them afterwards. While it runs, the current data sheet of `FRT-MAS-AAC100` is a fake, so do not assert on that SKU's data sheet in other e2e files. The same fakes appear in `GET /api/documents` while it runs: filter out `TEST-DS-` numbers before counting.
 - Do not commit unless asked.

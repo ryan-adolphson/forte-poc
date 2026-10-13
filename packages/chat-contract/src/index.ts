@@ -43,6 +43,29 @@ export interface ChatUsage {
   totalTokens: number;
 }
 
+/** One document in the documents list: the current revision of a product's data sheet. */
+export interface DocumentSummary extends DataSheetReference {
+  /** For example `Ready-Mix Concrete C32/40 - Product data sheet`. */
+  title: string;
+  sku: string;
+  productName: string;
+  /** The product's category slug, for example `concrete`. */
+  category: string;
+  /**
+   * How many revisions of this document exist, counting the current one and every
+   * superseded one. Only the count is exposed; superseded revisions cannot be read.
+   */
+  revisionCount: number;
+}
+
+/**
+ * Body of GET /api/documents: the current revision of every document, ordered by category
+ * then product name. Superseded revisions are never listed.
+ */
+export interface DocumentListResponse {
+  documents: DocumentSummary[];
+}
+
 /** Which data sheet, at which revision. Always the revision that was current when it was read. */
 export interface DataSheetReference {
   /** For example `DS-FRT-CON-C3240`. */

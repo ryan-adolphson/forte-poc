@@ -2,8 +2,10 @@ import {
   Component,
   ElementRef,
   afterRenderEffect,
+  booleanAttribute,
   computed,
   inject,
+  input,
   output,
   signal,
   viewChild,
@@ -34,10 +36,16 @@ const MAX_LENGTH = 2000;
     ProductCard,
   ],
   selector: 'app-chat-panel',
+  host: { '[class.page]': 'page()' },
   styleUrl: './chat-panel.css',
   templateUrl: './chat-panel.html',
 })
 export class ChatPanel {
+  /**
+   * The chat as a whole page, not in the side panel: it has the page's heading, no Close button,
+   * and its content is centred in a readable column.
+   */
+  readonly page = input(false, { transform: booleanAttribute });
   /** The user asked to close the panel. */
   readonly closed = output<void>();
 

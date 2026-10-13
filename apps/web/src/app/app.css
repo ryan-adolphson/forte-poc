@@ -3,30 +3,52 @@
   height: 100dvh;
 }
 
-mat-sidenav-container {
+/* Shown only while it has keyboard focus. */
+.skip {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 10;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--mat-sys-corner-small);
+  background: var(--mat-sys-inverse-surface);
+  color: var(--mat-sys-inverse-on-surface);
+}
+
+.skip:not(:focus) {
+  clip-path: inset(50%);
+}
+
+.shell {
   height: 100%;
 }
 
+/* The toolbar stays put; the navigation and the page fill the height under it. */
+.shell > mat-sidenav-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+}
+
 /* The chat panel: about 450px on a wide screen, the whole width on a phone. */
-mat-sidenav {
+.panel {
   width: min(100vw, 28rem);
   --mat-sidenav-container-text-color: var(--mat-sys-on-surface);
 }
 
 @media (max-width: 28rem) {
-  mat-sidenav {
+  .panel {
     --mat-sidenav-container-shape: 0;
   }
 }
 
-/* Above the cards' button labels, which Material lifts with a z-index of 1. */
-header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
 mat-toolbar {
+  gap: 0.5rem;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
 }
 
@@ -41,17 +63,27 @@ h1 img {
   border-radius: 20%;
 }
 
-.spacer {
-  flex: 1;
+.nav {
+  width: 14.5rem;
+  --mat-sidenav-container-shape: 0;
+  --mat-sidenav-container-divider-color: var(--mat-sys-outline-variant);
 }
 
+mat-nav-list {
+  padding: 0.5rem;
+}
+
+/* Line icons in the style of the product icons. */
+svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The page scrolls here, under the toolbar and beside the navigation. */
 main {
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 1rem 1rem 3rem;
-}
-
-.intro {
-  margin: 0.5rem 0 0;
-  color: var(--mat-sys-on-surface-variant);
+  height: 100%;
+  overflow-y: auto;
 }

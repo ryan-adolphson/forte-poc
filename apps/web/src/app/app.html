@@ -1,32 +1,83 @@
-<mat-sidenav-container>
-  <!-- In "over" mode Material traps focus in the panel, closes it on Escape or a click outside,
-       and returns focus to the button that opened it. -->
+<a class="skip" href="#content" (click)="showPageTop($event)">Skip to content</a>
+
+<mat-sidenav-container class="shell">
+  <!-- The chat about one product. In "over" mode Material traps focus in the panel, closes it on
+       Escape or a click outside, and returns focus to the button that opened it. Its code loads
+       when it first opens, and it is rendered only while open. -->
   <mat-sidenav
+    #panel
+    class="panel"
     mode="over"
     position="end"
     autoFocus="textarea"
     role="dialog"
     aria-modal="true"
     aria-label="Ask Forte"
+    [opened]="drawer.opened()"
+    (openedChange)="drawer.opened.set($event)"
   >
-    <app-chat-panel (closed)="panel().close()" />
+    @if (drawer.opened()) { @defer (on immediate) {
+    <app-chat-panel (closed)="panel.close()" />
+    } }
   </mat-sidenav>
 
   <mat-sidenav-content>
     <header>
       <mat-toolbar>
+        @if (narrow()) {
+        <button
+          matIconButton
+          type="button"
+          aria-label="Open navigation"
+          [attr.aria-expanded]="navOpen()"
+          (click)="navOpen.set(true)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
+        }
         <h1><img ngSrc="forte-mark.png" width="36" height="36" alt="Forte" priority /></h1>
-        <span class="spacer"></span>
-        <button matButton="filled" type="button" (click)="ask(null)">Ask Forte</button>
       </mat-toolbar>
     </header>
 
-    <main>
-      <p class="intro">
-        Construction materials with their tested properties. Browse the catalogue, or ask Forte
-        about any product.
-      </p>
-      <app-catalogue (ask)="ask($event)" />
-    </main>
+    <mat-sidenav-container class="body">
+      <!-- Beside the page on a wide screen. On a narrow one it opens over the page, with the
+           same focus handling as the chat panel. -->
+      <mat-sidenav
+        class="nav"
+        [mode]="narrow() ? 'over' : 'side'"
+        [opened]="!narrow() || navOpen()"
+        [disableClose]="!narrow()"
+        (openedChange)="navOpen.set($event)"
+      >
+        <nav aria-label="Main">
+          <mat-nav-list>
+            @for (link of links; track link.path) {
+            <a
+              mat-list-item
+              routerLinkActive
+              ariaCurrentWhenActive="page"
+              #active="routerLinkActive"
+              [routerLink]="link.path"
+              [activated]="active.isActive"
+              (click)="navOpen.set(false)"
+            >
+              <svg matListItemIcon viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path [attr.d]="link.icon" />
+              </svg>
+              {{ link.label }}
+            </a>
+            }
+          </mat-nav-list>
+        </nav>
+      </mat-sidenav>
+
+      <mat-sidenav-content>
+        <main #main id="content">
+          <router-outlet />
+        </main>
+      </mat-sidenav-content>
+    </mat-sidenav-container>
   </mat-sidenav-content>
 </mat-sidenav-container>

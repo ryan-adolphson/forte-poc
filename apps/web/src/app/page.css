@@ -1,0 +1,17 @@
+/* The frame of a scrolling page: the Products and Documents pages. */
+:host {
+  display: block;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1rem 1rem 3rem;
+}
+
+h2 {
+  margin: 0.5rem 0 0;
+  font: var(--mat-sys-headline-small);
+}
+
+.intro {
+  margin: 0.5rem 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}

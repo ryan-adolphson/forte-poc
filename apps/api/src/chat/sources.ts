@@ -1,5 +1,6 @@
 import type { ChatSource } from '@forte/chat-contract';
 import type { DocumentReference, DocumentText } from '../documents/document.js';
+import { documentUrl } from '../documents/document-url.js';
 
 /** Most sources attached to one answer. */
 export const MAX_SOURCES = 8;
@@ -42,11 +43,6 @@ export function catalogueSource(
     };
   }
   return source;
-}
-
-// No revision in the link: the endpoint serves whatever is current when it is opened.
-function documentUrl(documentNumber: string): string {
-  return `/api/documents/${encodeURIComponent(documentNumber)}/file`;
 }
 
 /**

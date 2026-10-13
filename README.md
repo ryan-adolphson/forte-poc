@@ -9,7 +9,7 @@ This is a proof of concept.
 | Path | What |
 | --- | --- |
 | `apps/api` | NestJS 12 API: the product catalogue, the chat stream, Gemini tool calling |
-| `apps/web` | Angular 22 product catalogue with an "Ask Forte" chat side panel |
+| `apps/web` | Angular 22 app: product catalogue, documents list and the Forte AI assistant |
 | `packages/chat-contract` | Request and event types shared by both apps (declarations only) |
 | `compose.yaml` | PostgreSQL for development, and the whole stack with `docker compose up` |
 
@@ -50,7 +50,12 @@ npm run api:dev    # API with reload on http://localhost:3000/api
 npm run web:dev    # web app on http://localhost:4200, proxies /api to the API
 ```
 
-Open <http://localhost:4200>. `npm run db:down` stops the database and keeps its data.
+Open <http://localhost:4200>. The web app has three pages, reached from the side navigation:
+Products (`/products`, the default), Documents (`/documents`, the current revision of every data
+sheet with a link to its PDF) and Forte AI (`/forte-ai`, the assistant for general questions).
+"Ask Forte" on a product opens a side panel about that product.
+
+`npm run db:down` stops the database and keeps its data.
 
 ## Run everything in Docker
 

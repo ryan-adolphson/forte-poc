@@ -46,14 +46,14 @@ describe('Catalogue', () => {
     await fixture.whenStable();
 
     expect(root.querySelector('[role="status"]')).toBeNull();
-    expect(text('h2')).toEqual(['Concrete', 'Reinforcing steel']);
+    expect(text('h3')).toEqual(['Concrete', 'Reinforcing steel']);
     const sections = root.querySelectorAll('section');
     expect(sections[0].querySelectorAll('mat-card')).toHaveLength(2);
     expect(sections[1].querySelectorAll('mat-card')).toHaveLength(1);
-    expect(sections[0].getAttribute('aria-labelledby')).toBe(sections[0].querySelector('h2')!.id);
+    expect(sections[0].getAttribute('aria-labelledby')).toBe(sections[0].querySelector('h3')!.id);
 
     const card = root.querySelector('mat-card')!;
-    expect(card.querySelector('h3')!.textContent).toContain('Ready-Mix Concrete C32/40');
+    expect(card.querySelector('h4')!.textContent).toContain('Ready-Mix Concrete C32/40');
     expect(card.textContent).toContain('CON-C3240');
     expect(card.textContent).toContain('Structural concrete for slabs, beams and columns.');
     expect(
@@ -179,7 +179,7 @@ describe('Catalogue', () => {
     await fixture.whenStable();
 
     expect(root.textContent).toContain('There are no products to show yet.');
-    expect(root.querySelector('h2')).toBeNull();
+    expect(root.querySelector('h3')).toBeNull();
   });
 
   it('gives an unknown category a readable heading', async () => {
@@ -191,7 +191,7 @@ describe('Catalogue', () => {
     });
     await fixture.whenStable();
 
-    expect(text('h2')).toEqual(['Roof tiles', 'Cement and mortar']);
+    expect(text('h3')).toEqual(['Roof tiles', 'Cement and mortar']);
   });
 
   describe('filters', () => {
@@ -203,7 +203,7 @@ describe('Catalogue', () => {
       Promise.all((await (await chips()).getChips({ selected: true })).map((c) => c.getText()));
     const selectCategory = async (label: string) =>
       (await (await chips()).getChips({ text: new RegExp('^' + label) }))[0].select();
-    const cards = () => text('mat-card h3');
+    const cards = () => text('mat-card h4');
     const results = () => text('.results')[0];
     const button = (label: string) =>
       [...root.querySelectorAll<HTMLElement>('button')].find(
@@ -259,19 +259,19 @@ describe('Catalogue', () => {
       await (await search()).setValue('  REBAR ');
 
       expect(cards()).toEqual(['Rebar B500B 12 mm']);
-      expect(text('h2')).toEqual(['Reinforcing steel']);
+      expect(text('h3')).toEqual(['Reinforcing steel']);
       expect(results()).toBe('Showing 1 of 3 products');
 
       await (await search()).setValue('en 206');
       expect(cards()).toEqual(['Ready-Mix Concrete C32/40']);
-      expect(text('h2')).toEqual(['Concrete']);
+      expect(text('h3')).toEqual(['Concrete']);
     });
 
     it('shows only the selected category, and everything again with All', async () => {
       await selectCategory('Reinforcing steel');
 
       expect(await selectedChips()).toEqual(['Reinforcing steel 1']);
-      expect(text('h2')).toEqual(['Reinforcing steel']);
+      expect(text('h3')).toEqual(['Reinforcing steel']);
       expect(cards()).toEqual(['Rebar B500B 12 mm']);
       expect(results()).toBe('Showing 1 of 3 products');
 
@@ -331,7 +331,7 @@ describe('Catalogue', () => {
       await (await search()).setValue(' rebar ');
 
       expect(root.querySelector('mat-card')).toBeNull();
-      expect(root.querySelector('h2')).toBeNull();
+      expect(root.querySelector('h3')).toBeNull();
       expect(results()).toBe('Showing 0 of 3 products');
       expect(text('.state p')).toEqual(['No products match “rebar” in Concrete.']);
       expect(root.textContent).not.toContain('There are no products to show yet.');

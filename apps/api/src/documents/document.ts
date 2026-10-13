@@ -16,6 +16,15 @@ export interface DocumentText {
 /** Which document is current for a product, without its text. */
 export type DocumentReference = Pick<DocumentText, 'documentNumber' | 'revision' | 'issueDate'>;
 
+/**
+ * One row of the documents list: a current revision without its text, plus its product's
+ * category and how many revisions of the document are stored (superseded ones included).
+ */
+export type DocumentListItem = Omit<DocumentText, 'text'> & {
+  category: string;
+  revisionCount: number;
+};
+
 /** The current revision's PDF, for the download endpoint. */
 export interface DocumentFile {
   documentNumber: string;

@@ -1,0 +1,112 @@
+<h2 tabindex="-1">Documents</h2>
+<p class="intro">
+  The product data sheets, each at its current revision. A link always opens the revision that is
+  current.
+</p>
+
+@if (documents.isLoading()) {
+<p class="state" role="status">
+  <mat-spinner diameter="20" aria-hidden="true" />
+  Loading documents…
+</p>
+} @else if (documents.error()) {
+<div class="state" role="alert">
+  <p>The documents could not be loaded.</p>
+  <button matButton="outlined" type="button" (click)="documents.reload()">Retry</button>
+</div>
+} @else if (all().length === 0) {
+<p class="state">There are no documents to show yet.</p>
+} @else {
+<div class="filters" role="search" aria-label="Documents">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Search documents</mat-label>
+    <input
+      #search
+      matInput
+      type="search"
+      autocomplete="off"
+      [value]="query()"
+      (input)="query.set(search.value)"
+      (keydown.escape)="query.set('')"
+    />
+    @if (query()) {
+    <button matIconButton matSuffix type="button" aria-label="Clear search" (click)="clearSearch()">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M6 6l12 12M18 6 6 18" />
+      </svg>
+    </button>
+    }
+  </mat-form-field>
+</div>
+<p class="results" aria-live="polite">
+  Showing {{ matches().length }} of {{ all().length }} documents
+</p>
+@if (groups().length) {
+<table>
+  <thead>
+    <tr>
+      <th scope="col">Product</th>
+      <th scope="col">Document number</th>
+      <th scope="col">Revision</th>
+      <th scope="col">Issued</th>
+      <th scope="col">PDF</th>
+    </tr>
+  </thead>
+  @for (group of groups(); track group.slug) {
+  <tbody>
+    <tr class="group">
+      <th colspan="5" scope="rowgroup">{{ group.label }}</th>
+    </tr>
+    @for (row of group.rows; track row.documentNumber) {
+    <tr>
+      <th scope="row">
+        <span class="product">
+          <app-product-icon [category]="row.category" />
+          <span>
+            {{ row.productName }}
+            <span class="sku">{{ row.sku }}</span>
+          </span>
+        </span>
+      </th>
+      <td>{{ row.documentNumber }}</td>
+      <td class="revision">
+        <!-- Read out in full; the short form is for the eye. -->
+        <span class="visually-hidden"
+          >Revision {{ row.revision }}@if (row.versions) {, {{ row.versions }}}</span
+        >
+        <span aria-hidden="true">
+          Rev {{ row.revision }}
+          @if (row.versions) {
+          <span class="versions">{{ row.versions }}</span>
+          }
+        </span>
+      </td>
+      <td class="issued">{{ row.issued }}</td>
+      <td class="open">
+        @if (row.href) {
+        <a
+          target="_blank"
+          rel="noopener"
+          [href]="row.href"
+          [attr.aria-label]="
+            'Open PDF of data sheet ' +
+            row.documentNumber +
+            ', Rev ' +
+            row.revision +
+            ' (opens in a new tab)'
+          "
+          >Open PDF</a
+        >
+        }
+      </td>
+    </tr>
+    }
+  </tbody>
+  }
+</table>
+} @else {
+<div class="state">
+  <p>No documents match “{{ query().trim() }}”.</p>
+  <button matButton="outlined" type="button" (click)="clearSearch()">Clear search</button>
+</div>
+} }

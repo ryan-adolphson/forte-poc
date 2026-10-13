@@ -50,7 +50,7 @@ input::-webkit-search-cancel-button {
   color: var(--mat-sys-on-surface-variant);
 }
 
-h2 {
+h3 {
   margin: 2rem 0 0.75rem;
   font: var(--mat-sys-title-large);
 }
@@ -73,7 +73,7 @@ mat-card-header {
   gap: 0.75rem;
 }
 
-h3 {
+h4 {
   margin: 0;
   font: var(--mat-sys-title-medium);
 }

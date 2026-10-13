@@ -61,6 +61,10 @@ describe('DocumentsService', () => {
   const currentRevision = async (name: string) =>
     (await documents.getCurrentFile(`${prefix}${name}`))?.revision ?? null;
 
+  /** What the documents list says about a test document, or undefined when it is not listed. */
+  const listed = async (name: string) =>
+    (await documents.listCurrent()).find((d) => d.documentNumber === `${prefix}${name}`);
+
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
@@ -96,6 +100,8 @@ describe('DocumentsService', () => {
       expect((await documents.searchCurrent(token('onlyMAINB'))).map((d) => d.revision)).toEqual(['B']);
       expect(await documents.searchCurrent(token('onlyMAINA'))).toEqual([]);
       expect((await documents.searchCurrent(`${token('title')} MAIN`)).map((d) => d.revision)).toEqual(['B']);
+      // The list shows B only, and counts the superseded A with it.
+      expect(await listed('MAIN')).toMatchObject({ revision: 'B', revisionCount: 2 });
     });
 
     it('returns exactly the documented keys, without id, flag, timestamps or bytes', async () => {
@@ -147,6 +153,12 @@ describe('DocumentsService', () => {
         { revision: 'C', isCurrent: true },
       ]);
       expect((await documents.searchCurrent(token('edited'))).map((d) => d.revision)).toEqual(['C']);
+
+      // The list has one entry for the document, and its count is every stored revision.
+      const entries = (await documents.listCurrent()).filter((d) => d.documentNumber === c.documentNumber);
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({ revision: 'C', revisionCount: 3 });
+      expect(entries[0]!.revisionCount).toBe((await stored('MAIN')).length);
     });
 
     it('moves currency when a re-ingested revision gets a later date', async () => {
@@ -202,6 +214,11 @@ describe('DocumentsService', () => {
       expect(await documents.getCurrentForSku(HIDDEN_SKU.toLowerCase())).toBeNull();
       expect(await documents.getCurrentForSku('FRT-NOPE-0000')).toBeNull();
       expect(await documents.getCurrentReferences([HIDDEN_SKU, 'FRT-NOPE-0000'])).toEqual(new Map());
+
+      // The list leaves it out too, while a current document of a visible product is in it.
+      const numbers = (await documents.listCurrent()).map((d) => d.documentNumber);
+      expect(numbers).not.toContain(hidden.documentNumber);
+      expect(numbers).toContain(`${prefix}MAIN`);
     });
 
     it('does not treat LIKE wildcards in a SKU as wildcards', async () => {

@@ -1,7 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, or } from '@prisma/orm-postgres/orm-client';
 import { PrismaService } from '../prisma/prisma.service.js';
-import type { DocumentFile, DocumentIngest, DocumentReference, DocumentText } from './document.js';
+import type {
+  DocumentFile,
+  DocumentIngest,
+  DocumentListItem,
+  DocumentReference,
+  DocumentText,
+} from './document.js';
 
 const MAX_RESULTS = 5;
 
@@ -84,6 +90,45 @@ export class DocumentsService {
       .limit(MAX_RESULTS)
       .all();
     return rows.map(toDocumentText);
+  }
+
+  /**
+   * Every current document of a visible product, for the documents page: no text, no bytes.
+   * Ordered by product category, then product name, then document number. Not capped.
+   *
+   * `revisionCount` is how many revisions are stored for the document number, superseded
+   * ones included. It is only a number about a document that is already listed: nothing of
+   * a superseded revision is read, and a document that `current()` leaves out gets no count.
+   */
+  async listCurrent(): Promise<DocumentListItem[]> {
+    const rows = await this.current()
+      .select('documentNumber', 'revision', 'issueDate', 'title')
+      .include('product', (p) => p.select('sku', 'name', 'category'))
+      .orderBy([
+        (d) => d.product.category.asc(),
+        (d) => d.product.name.asc(),
+        (d) => d.documentNumber.asc(),
+      ])
+      .all();
+    if (rows.length === 0) return [];
+
+    // One grouped count for the listed numbers only; deliberately not through `current()`.
+    const counts = await this.prisma.db.orm.public.Document.where((d) =>
+      d.documentNumber.in(rows.map((row) => row.documentNumber)),
+    )
+      .groupBy('documentNumber')
+      .aggregate((aggregate) => ({ revisionCount: aggregate.count() }));
+    const revisionCounts = new Map(counts.map((c) => [c.documentNumber, c.revisionCount]));
+
+    return rows.map(({ product, ...document }) => ({
+      ...document,
+      // Typed nullable by the ORM, but `product_id` is NOT NULL and `current()` requires the product.
+      sku: product!.sku,
+      productName: product!.name,
+      category: product!.category,
+      // The listed row itself is one of the counted revisions, so the number is always there.
+      revisionCount: revisionCounts.get(document.documentNumber)!,
+    }));
   }
 
   /** The current revision's PDF for this exact document number, or null. */

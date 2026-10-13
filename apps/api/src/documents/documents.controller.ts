@@ -8,6 +8,8 @@ import {
   Param,
   StreamableFile,
 } from '@nestjs/common';
+import type { DocumentListResponse } from '@forte/chat-contract';
+import { documentUrl } from './document-url.js';
 import { DocumentsService } from './documents.service.js';
 
 /** Letters, digits, dot, dash and underscore; what a document number can look like. */
@@ -16,6 +18,22 @@ const DOCUMENT_NUMBER = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 @Controller('documents')
 export class DocumentsController {
   constructor(@Inject(DocumentsService) private readonly documents: DocumentsService) {}
+
+  /**
+   * The current revision of every data sheet of a visible product, each with the link to
+   * its PDF. `no-store` so a list naming a superseded revision is not kept.
+   */
+  @Get()
+  @Header('Cache-Control', 'no-store')
+  async list(): Promise<DocumentListResponse> {
+    const documents = await this.documents.listCurrent();
+    return {
+      documents: documents.map((document) => ({
+        ...document,
+        url: documentUrl(document.documentNumber),
+      })),
+    };
+  }
 
   /**
    * The PDF of the CURRENT revision of a document. There is deliberately no revision in
