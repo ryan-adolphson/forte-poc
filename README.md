@@ -4,15 +4,16 @@ A chat assistant that answers questions about the company's construction-materia
 their properties (strength, density, thermal conductivity, standards). It answers only from the
 product catalogue and declines everything else. Replies stream to the client as they are written.
 
-This is a proof of concept. Only the backend exists so far.
+This is a proof of concept.
 
 | Path | What |
 | --- | --- |
 | `apps/api` | NestJS 12 API: the product catalogue, the chat stream, Gemini tool calling |
-| `packages/chat-contract` | Request and event types shared with the front end (declarations only) |
+| `apps/web` | Angular 22 single-page chat app |
+| `packages/chat-contract` | Request and event types shared by both apps (declarations only) |
 | `compose.yaml` | PostgreSQL for development |
 
-Not built yet: the web app, sign-in, saved conversations and document search.
+Not built yet: sign-in, saved conversations and document search.
 
 ## Prerequisites
 
@@ -41,11 +42,14 @@ Conversations are stored by Google so that follow-up questions keep their contex
 
 ## Run in development
 
+Two terminals:
+
 ```bash
 npm run api:dev    # API with reload on http://localhost:3000/api
+npm run web:dev    # web app on http://localhost:4200, proxies /api to the API
 ```
 
-`npm run db:down` stops the database and keeps its data.
+Open <http://localhost:4200>. `npm run db:down` stops the database and keeps its data.
 
 ## Chat endpoint
 
@@ -71,6 +75,8 @@ npm run build -w api       # type-check and compile the API
 npm run lint -w api
 npm test -w api            # unit tests
 npm run test:e2e -w api    # end-to-end tests; need the dev database up, migrated and seeded
+npm run build -w web       # production build of the web app, checked against its size budgets
+npm run test -w web -- --watch=false    # web unit tests
 ```
 
 Neither test suite calls the real model. The end-to-end tests only read the seeded products.

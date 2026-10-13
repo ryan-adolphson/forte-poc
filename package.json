@@ -11,6 +11,7 @@
   "scripts": {
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose stop postgres",
-    "api:dev": "npm run start:dev -w api"
+    "api:dev": "npm run start:dev -w api",
+    "web:dev": "npm run start -w web"
   }
 }

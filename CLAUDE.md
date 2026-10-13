@@ -46,19 +46,20 @@ Delegate work to the agent that owns the area.
 ## Layout
 
 - `apps/api`: NestJS 12 API. Chat module in `src/chat` (SSE endpoint `POST /api/chat/stream`, Gemini loop, tools in `src/chat/tools`), bot data access in `src/products`.
-- `apps/web`: Angular 22 app. Not built yet.
+- `apps/web`: Angular 22 app. One chat page; the stream client is in `src/app/chat.ts` and `src/app/sse-parser.ts`. The dev server proxies `/api` to the API. Model output is rendered as plain text, never as HTML.
 - `packages/chat-contract`: types shared by both apps (declarations only, import with `import type`).
 - `compose.yaml`: dev Postgres on port 5434.
 
-Not built yet: the web app, sign-in, saved conversations, document search, and Docker images for the apps. The chat endpoint is unauthenticated and rate limited per client IP.
+Not built yet: sign-in, saved conversations, document search, and Docker images for the apps. The chat endpoint is unauthenticated and rate limited per client IP.
 
 ## Commands
 
 Run from the repo root unless noted.
 
-- Dev: `npm run db:up`, `npm run api:dev`
+- Dev: `npm run db:up`, `npm run api:dev`, `npm run web:dev` (http://localhost:4200)
 - Database: `npm run db:deploy -w api` (apply migrations), `npm run db:seed -w api` (sample products, idempotent)
 - API checks: `npm run build -w api`, `npm run lint -w api`, `npm test -w api`, `npm run test:e2e -w api`
+- Web checks: `npm run build -w web`, `npm run test -w web -- --watch=false`
 - Schema change: edit `apps/api/src/prisma/contract.prisma`, then `npm run db:plan -w api -- --name <slug>`, read the plan, then `npm run db:migrate -w api`
 - Scope eval: `npm run eval:scope -w api` is a dry run that lists the cases. Adding `-- --yes` calls the real model and costs money, so ask before running it.
 
@@ -66,6 +67,7 @@ Run from the repo root unless noted.
 
 - Prisma is version 8 (release candidate), not classic Prisma. There is no `schema.prisma`, `PrismaClient`, `prisma generate` or `migrate dev`. Use the `prisma-8` skill in `apps/api/.claude/skills/`.
 - Run `npm install` from the repo root with `-w api` or `-w web`, never inside an app folder.
+- The global `ng` CLI is older than the workspace. Use `npx ng` from `apps/web`.
 - The API is ESM: relative imports end in `.js`. Tests are Vitest and lint is oxlint (the NestJS 12 defaults), not Jest and ESLint.
 - Gemini model names and API shapes come from the `gemini-api-dev` skill, never from memory. Conversations are stored by Google (`store: true`).
 - The Gemini API key lives in `apps/api/.env`. It must never reach the browser or the logs.

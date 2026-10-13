@@ -1,0 +1,80 @@
+<header class="header">
+  <h1>Forte Search</h1>
+  <button
+    type="button"
+    class="secondary"
+    [disabled]="chat.messages().length === 0"
+    (click)="newChat()"
+  >
+    New chat
+  </button>
+</header>
+
+<main #scroller class="messages" tabindex="0" aria-label="Conversation" (scroll)="onScroll()">
+  <div class="column">
+    @if (chat.messages().length === 0) {
+      <section class="empty">
+        <p>Ask about our construction materials and their properties.</p>
+        <ul class="examples" aria-label="Example questions">
+          @for (example of examples; track example) {
+            <li>
+              <button type="button" class="secondary" (click)="ask(example)">{{ example }}</button>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @for (message of chat.messages(); track message.id) {
+      <article class="message" [class.user]="message.role === 'user'">
+        <h2 class="who">{{ message.role === 'user' ? 'You' : 'Assistant' }}</h2>
+        @if (message.text) {
+          <p class="text">{{ message.text }}</p>
+        }
+        @if ($last && statusLine(); as line) {
+          <p class="note">{{ line }}</p>
+        }
+        @if (message.stopped) {
+          <p class="note">Stopped.</p>
+        }
+        @if (message.error) {
+          <p class="error">{{ message.error }}</p>
+          @if (message.retryable && $last && !chat.busy()) {
+            <button type="button" class="secondary" (click)="retry()">Try again</button>
+          }
+        }
+      </article>
+    }
+  </div>
+</main>
+
+<div class="visually-hidden" aria-live="polite">{{ announcement() }}</div>
+
+<footer class="composer">
+  <form class="column" (submit)="submit($event)">
+    <label class="visually-hidden" for="message">Message</label>
+    <div class="row">
+      <textarea
+        #input
+        id="message"
+        rows="2"
+        placeholder="Ask about a product…"
+        aria-describedby="ai-note"
+        [formField]="chatForm.message"
+        (keydown.enter)="onEnter($event)"
+      ></textarea>
+      @if (chat.busy()) {
+        <button type="button" class="secondary" (click)="stop()">Stop</button>
+      }
+      <button type="submit" [disabled]="!canSend()">Send</button>
+    </div>
+    <p class="hint">
+      <span id="ai-note">Answers are written by an AI assistant from the product catalogue.</span>
+      @if (showCount()) {
+        <span class="count" [class.over]="length() > maxLength"
+          >{{ length() }} / {{ maxLength }}</span
+        >
+      }
+    </p>
+  </form>
+</footer>
