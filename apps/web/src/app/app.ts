@@ -8,12 +8,28 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormField, form, maxLength } from '@angular/forms/signals';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { MatButton } from '@angular/material/button';
+import { MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
+import { MatInput } from '@angular/material/input';
+import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { MatToolbar } from '@angular/material/toolbar';
 import { Chat } from './chat';
 
 const MAX_LENGTH = 2000;
 
 @Component({
-  imports: [FormField],
+  imports: [
+    FormField,
+    CdkTextareaAutosize,
+    MatButton,
+    MatFormField,
+    MatHint,
+    MatInput,
+    MatLabel,
+    MatProgressSpinner,
+    MatToolbar,
+  ],
   selector: 'app-root',
   styleUrl: './app.css',
   templateUrl: './app.html',
@@ -70,9 +86,11 @@ export class App {
   constructor() {
     afterRenderEffect({
       write: () => {
-        // Re-run whenever the conversation or the status line changes.
+        // Re-run whenever the conversation or the status line changes, and when the message box
+        // grows or shrinks with its text, which changes the height left for the conversation.
         this.chat.messages();
         this.statusLine();
+        this.length();
         if (this.pinnedToBottom) {
           const element = this.scroller().nativeElement;
           element.scrollTop = element.scrollHeight;

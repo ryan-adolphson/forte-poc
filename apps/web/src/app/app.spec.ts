@@ -1,10 +1,16 @@
+import { HarnessLoader } from '@angular/cdk/testing';
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatButtonHarness } from '@angular/material/button/testing';
+import { MatFormFieldHarness } from '@angular/material/form-field/testing';
+import { MatProgressSpinnerHarness } from '@angular/material/progress-spinner/testing';
 import { FakeStream, fakeFetch, settle } from '../testing/fake-chat-stream';
 import { App } from './app';
 
 describe('App', () => {
   let fixture: ComponentFixture<App>;
   let root: HTMLElement;
+  let loader: HarnessLoader;
   let streams: FakeStream[];
 
   beforeEach(async () => {
@@ -12,6 +18,7 @@ describe('App', () => {
     TestBed.configureTestingModule({});
     fixture = TestBed.createComponent(App);
     root = fixture.nativeElement;
+    loader = TestbedHarnessEnvironment.loader(fixture);
     await fixture.whenStable();
   });
 
@@ -20,8 +27,10 @@ describe('App', () => {
   });
 
   const textarea = () => root.querySelector('textarea')!;
-  const button = (label: string) =>
-    [...root.querySelectorAll('button')].find((b) => b.textContent.trim() === label);
+  /** The Material button with exactly this label, or null when it is not on the page. */
+  const button = (label: string) => loader.getHarnessOrNull(MatButtonHarness.with({ text: label }));
+  const disabled = async (label: string) => (await button(label))!.isDisabled();
+  const spinners = () => loader.getAllHarnesses(MatProgressSpinnerHarness);
   const messages = () => [...root.querySelectorAll('.message')].map((m) => m.textContent.trim());
   const liveRegion = () => root.querySelector('[aria-live="polite"]')!.textContent.trim();
 
@@ -45,12 +54,16 @@ describe('App', () => {
     await fixture.whenStable();
   }
 
-  it('shows the empty state, the AI note and a labelled message box', () => {
+  it('shows the empty state, the AI note and a labelled message box', async () => {
     expect(root.querySelector('h1')!.textContent).toContain('Forte Search');
     expect(root.querySelectorAll('.examples button')).toHaveLength(4);
-    expect(root.textContent).toContain('AI assistant');
-    expect(root.querySelector('label[for="message"]')!.textContent).toContain('Message');
-    expect(button('New chat')!.disabled).toBe(true);
+    const field = await loader.getHarness(MatFormFieldHarness);
+    expect(await field.getLabel()).toBe('Message');
+    expect(root.querySelector('label[for="message"]')).not.toBeNull();
+    const note = root.querySelector('#ai-note')!;
+    expect(note.textContent).toContain('AI assistant');
+    expect(textarea().getAttribute('aria-describedby')).toContain('ai-note');
+    expect(await disabled('New chat')).toBe(true);
   });
 
   it('sends on Enter, clears the box and keeps focus in it', async () => {
@@ -75,43 +88,44 @@ describe('App', () => {
   });
 
   it('disables Send when the box is empty or a reply is in progress', async () => {
-    expect(button('Send')!.disabled).toBe(true);
+    expect(await disabled('Send')).toBe(true);
     await type('   ');
-    expect(button('Send')!.disabled).toBe(true);
+    expect(await disabled('Send')).toBe(true);
     await type('hello');
-    expect(button('Send')!.disabled).toBe(false);
-    expect(button('Stop')).toBeUndefined();
+    expect(await disabled('Send')).toBe(false);
+    expect(await button('Stop')).toBeNull();
 
-    button('Send')!.click();
+    await (await button('Send'))!.click();
     await settle();
     await fixture.whenStable();
     expect(streams).toHaveLength(1);
 
     await type('next question');
-    expect(button('Send')!.disabled).toBe(true);
-    expect(button('Stop')).toBeDefined();
+    expect(await disabled('Send')).toBe(true);
+    expect(await button('Stop')).not.toBeNull();
     await pressEnter();
     expect(streams).toHaveLength(1);
     expect(textarea().value).toBe('next question');
 
     await rendered(streams[0].emit('done', { interactionId: 'int-1', usage: null }));
     await rendered(streams[0].close());
-    expect(button('Send')!.disabled).toBe(false);
-    expect(button('Stop')).toBeUndefined();
+    expect(await disabled('Send')).toBe(false);
+    expect(await button('Stop')).toBeNull();
   });
 
   it('shows the character count near the limit and blocks an over-long message', async () => {
     await type('a'.repeat(1700));
     expect(root.querySelector('.count')).toBeNull();
     await type('a'.repeat(1990));
-    expect(root.querySelector('.count')!.textContent).toContain('1990 / 2000');
-    expect(button('Send')!.disabled).toBe(false);
+    const field = await loader.getHarness(MatFormFieldHarness);
+    expect(await field.getTextHints()).toEqual(['1990 / 2000']);
+    expect(await disabled('Send')).toBe(false);
     await type('a'.repeat(2001));
-    expect(button('Send')!.disabled).toBe(true);
+    expect(await disabled('Send')).toBe(true);
   });
 
   it('sends an example question on click', async () => {
-    button('What timber products do you have?')!.click();
+    await (await button('What timber products do you have?'))!.click();
     await settle();
     await fixture.whenStable();
 
@@ -125,6 +139,7 @@ describe('App', () => {
     await pressEnter();
     const stream = streams[0];
     expect(messages()[1]).toContain('Thinking…');
+    expect(await spinners()).toHaveLength(1);
 
     await rendered(stream.emit('tool', { name: 'search_products', status: 'started' }));
     expect(messages()[1]).toContain('Searching the catalogue…');
@@ -132,6 +147,7 @@ describe('App', () => {
     await rendered(stream.emit('text', { delta: 'C32/40 reaches ' }));
     expect(root.querySelectorAll('.message .text')[1].textContent).toBe('C32/40 reaches ');
     expect(messages()[1]).not.toContain('Searching');
+    expect(await spinners()).toHaveLength(0);
 
     await rendered(stream.emit('text', { delta: '40 MPa.\n<b>not html</b>' }));
     const text = root.querySelectorAll('.message .text')[1];
@@ -156,11 +172,11 @@ describe('App', () => {
     expect(messages()[1]).toContain('Partial');
     expect(root.querySelector('.error')!.textContent).toContain('The answer was cut off.');
     expect(liveRegion()).toContain('The answer was cut off.');
-    expect(button('Send')!.disabled).toBe(true); // empty box, but usable again:
+    expect(await disabled('Send')).toBe(true); // empty box, but usable again:
     await type('again');
-    expect(button('Send')!.disabled).toBe(false);
+    expect(await disabled('Send')).toBe(false);
 
-    button('Try again')!.click();
+    await (await button('Try again'))!.click();
     await settle();
     await fixture.whenStable();
     expect(streams[1].body).toEqual({ message: 'q' });
@@ -172,7 +188,7 @@ describe('App', () => {
     await pressEnter();
     await rendered(streams[0].emit('text', { delta: 'So far' }));
 
-    button('Stop')!.click();
+    await (await button('Stop'))!.click();
     await settle();
     await fixture.whenStable();
 
@@ -187,7 +203,7 @@ describe('App', () => {
     await rendered(streams[0].emit('done', { interactionId: 'int-1', usage: null }));
     await rendered(streams[0].close());
 
-    button('New chat')!.click();
+    await (await button('New chat'))!.click();
     await fixture.whenStable();
 
     expect(messages()).toEqual([]);

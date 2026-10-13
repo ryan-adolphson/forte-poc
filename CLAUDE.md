@@ -46,7 +46,7 @@ Delegate work to the agent that owns the area.
 ## Layout
 
 - `apps/api`: NestJS 12 API. Chat module in `src/chat` (SSE endpoint `POST /api/chat/stream`, Gemini loop, tools in `src/chat/tools`), bot data access in `src/products`.
-- `apps/web`: Angular 22 app. One chat page; the stream client is in `src/app/chat.ts` and `src/app/sse-parser.ts`. The dev server proxies `/api` to the API. Model output is rendered as plain text, never as HTML.
+- `apps/web`: Angular 22 app with Angular Material 22 (Material 3 theme in `src/styles.scss`; colours come only from `--mat-sys-*` tokens). One chat page; the stream client is in `src/app/chat.ts` and `src/app/sse-parser.ts`. The dev server proxies `/api` to the API. Model output is rendered as plain text, never as HTML.
 - `packages/chat-contract`: types shared by both apps (declarations only, import with `import type`).
 - `compose.yaml`: dev Postgres on port 5434, plus `migrate` (migrations and seed), `api` and `web` (nginx). There are no profiles: `docker compose up --build` runs the whole stack on http://localhost:8088. Dockerfiles are in `apps/api` and `apps/web`, built with the repo root as context.
 

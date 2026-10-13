@@ -1,0 +1,29 @@
+@use '@angular/material' as mat;
+@use './theme-colors' as theme;
+
+// One Material 3 theme. `mat.theme` emits the `--mat-sys-*` variables with `light-dark()`
+// values, so the page follows the system light or dark preference. The blue-grey palette is in
+// `_theme-colors.scss` (made with `ng generate @angular/material:theme-color`).
+// System fonts are used, so nothing is fetched from a font service.
+html {
+  color-scheme: light dark;
+  @include mat.theme(
+    (
+      color: theme.$primary-palette,
+      typography: (
+        plain-family: (
+          system-ui,
+          sans-serif,
+        ),
+      ),
+      density: 0,
+    )
+  );
+}
+
+body {
+  margin: 0;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-large);
+}

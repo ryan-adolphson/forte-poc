@@ -1,13 +1,11 @@
-<header class="header">
-  <h1>Forte Search</h1>
-  <button
-    type="button"
-    class="secondary"
-    [disabled]="chat.messages().length === 0"
-    (click)="newChat()"
-  >
-    New chat
-  </button>
+<header>
+  <mat-toolbar>
+    <h1>Forte Search</h1>
+    <span class="spacer"></span>
+    <button matButton type="button" [disabled]="chat.messages().length === 0" (click)="newChat()">
+      New chat
+    </button>
+  </mat-toolbar>
 </header>
 
 <main #scroller class="messages" tabindex="0" aria-label="Conversation" (scroll)="onScroll()">
@@ -18,7 +16,9 @@
         <ul class="examples" aria-label="Example questions">
           @for (example of examples; track example) {
             <li>
-              <button type="button" class="secondary" (click)="ask(example)">{{ example }}</button>
+              <button matButton="outlined" type="button" (click)="ask(example)">
+                {{ example }}
+              </button>
             </li>
           }
         </ul>
@@ -32,7 +32,10 @@
           <p class="text">{{ message.text }}</p>
         }
         @if ($last && statusLine(); as line) {
-          <p class="note">{{ line }}</p>
+          <p class="note status">
+            <mat-spinner diameter="16" aria-hidden="true" />
+            {{ line }}
+          </p>
         }
         @if (message.stopped) {
           <p class="note">Stopped.</p>
@@ -40,7 +43,7 @@
         @if (message.error) {
           <p class="error">{{ message.error }}</p>
           @if (message.retryable && $last && !chat.busy()) {
-            <button type="button" class="secondary" (click)="retry()">Try again</button>
+            <button matButton="outlined" type="button" (click)="retry()">Try again</button>
           }
         }
       </article>
@@ -52,29 +55,33 @@
 
 <footer class="composer">
   <form class="column" (submit)="submit($event)">
-    <label class="visually-hidden" for="message">Message</label>
     <div class="row">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Message</mat-label>
       <textarea
         #input
+        matInput
         id="message"
-        rows="2"
-        placeholder="Ask about a product…"
+        cdkTextareaAutosize
+        cdkAutosizeMinRows="1"
+        cdkAutosizeMaxRows="6"
         aria-describedby="ai-note"
         [formField]="chatForm.message"
         (keydown.enter)="onEnter($event)"
       ></textarea>
-      @if (chat.busy()) {
-        <button type="button" class="secondary" (click)="stop()">Stop</button>
-      }
-      <button type="submit" [disabled]="!canSend()">Send</button>
-    </div>
-    <p class="hint">
-      <span id="ai-note">Answers are written by an AI assistant from the product catalogue.</span>
       @if (showCount()) {
-        <span class="count" [class.over]="length() > maxLength"
-          >{{ length() }} / {{ maxLength }}</span
+        <mat-hint align="end" class="count" [class.over]="length() > maxLength"
+          >{{ length() }} / {{ maxLength }}</mat-hint
         >
       }
+    </mat-form-field>
+    @if (chat.busy()) {
+      <button matButton="outlined" type="button" (click)="stop()">Stop</button>
+    }
+    <button matButton="filled" type="submit" [disabled]="!canSend()">Send</button>
+    </div>
+    <p id="ai-note" class="note">
+      Answers are written by an AI assistant from the product catalogue.
     </p>
   </form>
 </footer>
