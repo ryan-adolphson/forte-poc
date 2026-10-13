@@ -47,7 +47,7 @@ Delegate work to the agent that owns the area.
 ## Layout
 
 - `apps/api`: NestJS 12 API. Chat module in `src/chat` (SSE endpoint `POST /api/chat/stream`, Gemini loop, tools in `src/chat/tools`), bot data access in `src/products`.
-- `apps/web`: Angular 22 app with Angular Material 22 (Material 3 theme in `src/styles.scss`; colours come only from `--mat-sys-*` tokens). The home page is a product catalogue (`src/app/catalogue.ts`); each product card and the header open an "Ask Forte" chat side panel (`src/app/chat-panel.ts`) with a card for the selected product. The stream client is in `src/app/chat.ts` and `src/app/sse-parser.ts`. The dev server proxies `/api` to the API. Model output is rendered as plain text, never as HTML.
+- `apps/web`: Angular 22 app with Angular Material 22 (Material 3 theme in `src/styles.scss`, generated from the Forte logo's green `#3aab2c` and slate `#5a636b`; colours come only from `--mat-sys-*` tokens). The home page is a product catalogue (`src/app/catalogue.ts`); each product card and the header open an "Ask Forte" chat side panel (`src/app/chat-panel.ts`) with a card for the selected product. The stream client is in `src/app/chat.ts` and `src/app/sse-parser.ts`. The dev server proxies `/api` to the API. Model output is rendered as plain text, never as HTML.
 - `packages/chat-contract`: types shared by both apps (declarations only, import with `import type`).
 - `compose.yaml`: dev Postgres on port 5434, plus `migrate` (migrations and seed), `api` and `web` (nginx). There are no profiles: `docker compose up --build` runs the whole stack on http://localhost:8088. Dockerfiles are in `apps/api` and `apps/web`, built with the repo root as context.
 

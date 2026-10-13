@@ -2,8 +2,10 @@
 @use './theme-colors' as theme;
 
 // One Material 3 theme. `mat.theme` emits the `--mat-sys-*` variables with `light-dark()`
-// values, so the page follows the system light or dark preference. The blue-grey palette is in
-// `_theme-colors.scss` (made with `ng generate @angular/material:theme-color`).
+// values, so the page follows the system light or dark preference. The palette follows the Forte
+// logo: its green (#3aab2c) is the primary accent, its slate grey (#5a636b) tints the secondary
+// colours, outlines and surfaces. It is in `_theme-colors.scss` (made with
+// `ng generate @angular/material:theme-color`; the exact command is at the top of that file).
 // System fonts are used, so nothing is fetched from a font service.
 html {
   color-scheme: light dark;

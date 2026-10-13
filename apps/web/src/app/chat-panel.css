@@ -83,8 +83,9 @@ h2 {
 .message.user {
   max-width: 85%;
   margin-left: auto;
-  background: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
+  /* Slate, not the green container: at this size the light green reads as neon. */
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
 }
 
 .message p {
