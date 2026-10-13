@@ -1,5 +1,11 @@
 import { Service, computed, signal } from '@angular/core';
-import type { ChatErrorBody, ChatEvent, ChatRequest, Product } from '@forte/chat-contract';
+import type {
+  ChatErrorBody,
+  ChatEvent,
+  ChatRequest,
+  ChatSource,
+  Product,
+} from '@forte/chat-contract';
 import { SseMessage, SseParser } from './sse-parser';
 
 export interface ChatMessage {
@@ -12,6 +18,11 @@ export interface ChatMessage {
   retryable?: boolean;
   /** Assistant only: the user stopped the reply. */
   stopped?: boolean;
+  /**
+   * Assistant only: what a completed answer drew on, from its `done` event. Absent on a reply
+   * that is still being written, failed, was stopped or lost its connection.
+   */
+  sources?: ChatSource[];
 }
 
 export type ChatStatus = 'idle' | 'sending' | 'streaming';
@@ -21,6 +32,8 @@ const TOOL_LABELS: Record<string, string> = {
   get_product: 'Looking up product details…',
   list_products: 'Listing the catalogue…',
   list_categories: 'Checking the product categories…',
+  get_data_sheet: 'Reading the data sheet…',
+  search_data_sheets: 'Searching the data sheets…',
 };
 
 const CONNECTION_LOST = 'Connection lost. The answer may be incomplete.';
@@ -176,6 +189,8 @@ export class Chat {
         return false;
       case 'done':
         this.interactionIdState.set(event.data.interactionId);
+        // `?? []`: an API older than the contract sends no `sources`.
+        this.patch(id, { sources: event.data.sources ?? [] });
         return true;
       case 'error':
         this.patch(id, {

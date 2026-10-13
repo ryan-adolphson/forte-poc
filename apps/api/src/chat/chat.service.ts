@@ -2,8 +2,10 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Interactions } from '@google/genai';
 import type { ChatErrorCode, ChatEvent, ChatRequest, ChatUsage } from '@forte/chat-contract';
 import { appConfig, type AppConfig } from '../config/app.config.js';
+import { DocumentsService } from '../documents/documents.service.js';
 import { ProductsService } from '../products/products.service.js';
 import { buildGeminiRequest, GEMINI_STREAM, type GeminiStream } from './gemini.js';
+import { selectSources, type SourceCandidate } from './sources.js';
 import { withProductContext } from './system-prompt.js';
 import { chatTools } from './tools/index.js';
 import type { ToolResult } from './tools/tool.js';
@@ -29,16 +31,20 @@ export class ChatService {
     @Inject(appConfig.KEY) private readonly config: AppConfig,
     @Inject(GEMINI_STREAM) private readonly gemini: GeminiStream | null,
     @Inject(ProductsService) private readonly products: ProductsService,
+    @Inject(DocumentsService) private readonly documents: DocumentsService,
   ) {}
 
   /**
    * Runs one user turn and yields the contract's events: `start`, then `tool` and `text`
-   * events, then exactly one `done` or `error`. Never throws. When `signal` aborts (the
+   * events, then exactly one `done` (with the answer's sources) or `error`. Never throws. When `signal` aborts (the
    * client went away) the upstream request is aborted and the generator just ends.
    */
   async *run(request: ChatRequest, signal: AbortSignal): AsyncGenerator<ChatEvent> {
     const startedAt = Date.now();
     const toolNames: string[] = [];
+    // What the tools returned in this turn, and the answer so far: `done` cites from these.
+    const candidates: SourceCandidate[] = [];
+    let answer = '';
     const usage: ChatUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
     let usageReported = false;
     let rounds = 0;
@@ -105,6 +111,7 @@ export class ChatService {
             case 'step.delta':
               if (event.delta.type === 'text') {
                 answered = true;
+                answer += event.delta.text;
                 yield { event: 'text', data: { delta: event.delta.text } };
               } else if (event.delta.type === 'arguments_delta') {
                 const call = calls.get(event.index);
@@ -146,6 +153,7 @@ export class ChatService {
             yield { event: 'tool', data: { name: call.name, status: 'started' } };
             const result = await this.runTool(call);
             yield { event: 'tool', data: { name: call.name, status: 'finished' } };
+            if (result.ok && result.sources) candidates.push(...result.sources);
             results.push({
               type: 'function_result',
               name: call.name,
@@ -166,7 +174,11 @@ export class ChatService {
           outcome = 'done';
           yield {
             event: 'done',
-            data: { interactionId, usage: usageReported ? usage : null },
+            data: {
+              interactionId,
+              usage: usageReported ? usage : null,
+              sources: selectSources(answer, candidates),
+            },
           };
         } else if (status === 'incomplete') {
           // Output limit reached: the text already sent is not a whole answer.
@@ -215,7 +227,7 @@ export class ChatService {
     }
 
     try {
-      return await tool.run(args as Record<string, unknown>, this.products);
+      return await tool.run(args as Record<string, unknown>, this.products, this.documents);
     } catch (error) {
       this.logger.error(`tool ${call.name} failed: ${error instanceof Error ? error.name : 'unknown'}`);
       return { ok: false, error: 'The lookup failed. Try again, or tell the user it is unavailable.' };

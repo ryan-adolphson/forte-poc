@@ -1,0 +1,232 @@
+[
+  {
+    "sku": "FRT-CEM-MORM4",
+    "productName": "Masonry Mortar M4 (dry premix)",
+    "documentNumber": "DS-FRT-CEM-MORM4",
+    "revision": "A",
+    "issueDate": "2025-01-03",
+    "current": true,
+    "file": "datasheets/FRT-CEM-MORM4_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-CEM-I525N",
+    "productName": "Portland Cement CEM I 52.5N",
+    "documentNumber": "DS-FRT-CEM-I525N",
+    "revision": "A",
+    "issueDate": "2025-06-10",
+    "current": true,
+    "file": "datasheets/FRT-CEM-I525N_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-CON-C2530",
+    "productName": "Ready-Mix Concrete C25/30",
+    "documentNumber": "DS-FRT-CON-C2530",
+    "revision": "A",
+    "issueDate": "2025-11-17",
+    "current": true,
+    "file": "datasheets/FRT-CON-C2530_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-CON-C3240",
+    "productName": "Ready-Mix Concrete C32/40",
+    "documentNumber": "DS-FRT-CON-C3240",
+    "revision": "A",
+    "issueDate": "2024-03-11",
+    "current": false,
+    "file": "datasheets/FRT-CON-C3240_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-CON-C3240",
+    "productName": "Ready-Mix Concrete C32/40",
+    "documentNumber": "DS-FRT-CON-C3240",
+    "revision": "B",
+    "issueDate": "2025-02-03",
+    "current": false,
+    "file": "datasheets/FRT-CON-C3240_rev-B.pdf",
+    "change": "Mix redesigned with a lower water/cement ratio. Exposure class extended from XC3, XC4 to XC4, XD1."
+  },
+  {
+    "sku": "FRT-CON-C3240",
+    "productName": "Ready-Mix Concrete C32/40",
+    "documentNumber": "DS-FRT-CON-C3240",
+    "revision": "C",
+    "issueDate": "2026-01-19",
+    "current": true,
+    "file": "datasheets/FRT-CON-C3240_rev-C.pdf",
+    "change": "Aggregate source changed. Density revised from 2400 to 2380 kg/m³."
+  },
+  {
+    "sku": "FRT-CON-C4050",
+    "productName": "Ready-Mix Concrete C40/50",
+    "documentNumber": "DS-FRT-CON-C4050",
+    "revision": "A",
+    "issueDate": "2025-09-07",
+    "current": true,
+    "file": "datasheets/FRT-CON-C4050_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-INS-MW100",
+    "productName": "Mineral Wool Slab 100 mm",
+    "documentNumber": "DS-FRT-INS-MW100",
+    "revision": "A",
+    "issueDate": "2025-02-14",
+    "current": true,
+    "file": "datasheets/FRT-INS-MW100_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-INS-PIR080",
+    "productName": "PIR Insulation Board 80 mm",
+    "documentNumber": "DS-FRT-INS-PIR080",
+    "revision": "A",
+    "issueDate": "2024-06-17",
+    "current": false,
+    "file": "datasheets/FRT-INS-PIR080_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-INS-PIR080",
+    "productName": "PIR Insulation Board 80 mm",
+    "documentNumber": "DS-FRT-INS-PIR080",
+    "revision": "B",
+    "issueDate": "2025-05-12",
+    "current": false,
+    "file": "datasheets/FRT-INS-PIR080_rev-B.pdf",
+    "change": "New blowing agent. Thermal conductivity improved from 0.023 to 0.022 W/m·K."
+  },
+  {
+    "sku": "FRT-INS-PIR080",
+    "productName": "PIR Insulation Board 80 mm",
+    "documentNumber": "DS-FRT-INS-PIR080",
+    "revision": "C",
+    "issueDate": "2026-03-02",
+    "current": true,
+    "file": "datasheets/FRT-INS-PIR080_rev-C.pdf",
+    "change": "Compressive strength at 10 % deformation raised from 140 to 150 kPa after updated type testing."
+  },
+  {
+    "sku": "FRT-INS-XPS050",
+    "productName": "XPS Insulation Board 50 mm",
+    "documentNumber": "DS-FRT-INS-XPS050",
+    "revision": "A",
+    "issueDate": "2025-12-04",
+    "current": true,
+    "file": "datasheets/FRT-INS-XPS050_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-MAS-AAC100",
+    "productName": "Aerated Concrete (AAC) Block 100 mm",
+    "documentNumber": "DS-FRT-MAS-AAC100",
+    "revision": "A",
+    "issueDate": "2025-05-11",
+    "current": true,
+    "file": "datasheets/FRT-MAS-AAC100_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-MAS-BRK65",
+    "productName": "Clay Facing Brick 65 mm Red Multi",
+    "documentNumber": "DS-FRT-MAS-BRK65",
+    "revision": "A",
+    "issueDate": "2025-10-18",
+    "current": true,
+    "file": "datasheets/FRT-MAS-BRK65_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-MAS-BLK140D",
+    "productName": "Dense Concrete Block 140 mm 7.3N",
+    "documentNumber": "DS-FRT-MAS-BLK140D",
+    "revision": "A",
+    "issueDate": "2025-03-25",
+    "current": true,
+    "file": "datasheets/FRT-MAS-BLK140D_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-RST-B500B12",
+    "productName": "Reinforcing Bar B500B 12 mm",
+    "documentNumber": "DS-FRT-RST-B500B12",
+    "revision": "A",
+    "issueDate": "2025-08-08",
+    "current": true,
+    "file": "datasheets/FRT-RST-B500B12_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-RST-B500B16",
+    "productName": "Reinforcing Bar B500B 16 mm",
+    "documentNumber": "DS-FRT-RST-B500B16",
+    "revision": "A",
+    "issueDate": "2025-01-15",
+    "current": true,
+    "file": "datasheets/FRT-RST-B500B16_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-RST-M10200",
+    "productName": "Welded Reinforcing Mesh B500A 10 mm at 200 mm",
+    "documentNumber": "DS-FRT-RST-M10200",
+    "revision": "A",
+    "issueDate": "2025-06-22",
+    "current": true,
+    "file": "datasheets/FRT-RST-M10200_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-STS-SHS100S275",
+    "productName": "Square Hollow Section 100 x 100 x 5 S275J0H",
+    "documentNumber": "DS-FRT-STS-SHS100S275",
+    "revision": "A",
+    "issueDate": "2025-11-05",
+    "current": true,
+    "file": "datasheets/FRT-STS-SHS100S275_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-STS-UB406S355",
+    "productName": "Universal Beam 406 x 178 x 60 S355JR",
+    "documentNumber": "DS-FRT-STS-UB406S355",
+    "revision": "A",
+    "issueDate": "2025-04-12",
+    "current": true,
+    "file": "datasheets/FRT-STS-UB406S355_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-TIM-CLT120",
+    "productName": "CLT Panel 120 mm (3-layer)",
+    "documentNumber": "DS-FRT-TIM-CLT120",
+    "revision": "A",
+    "issueDate": "2025-09-19",
+    "current": true,
+    "file": "datasheets/FRT-TIM-CLT120_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-TIM-GL28H",
+    "productName": "Glulam Beam GL28h 140 x 405",
+    "documentNumber": "DS-FRT-TIM-GL28H",
+    "revision": "A",
+    "issueDate": "2025-02-26",
+    "current": true,
+    "file": "datasheets/FRT-TIM-GL28H_rev-A.pdf",
+    "change": "First issue."
+  },
+  {
+    "sku": "FRT-TIM-C24",
+    "productName": "Structural Softwood C24 47 x 195",
+    "documentNumber": "DS-FRT-TIM-C24",
+    "revision": "A",
+    "issueDate": "2025-07-09",
+    "current": true,
+    "file": "datasheets/FRT-TIM-C24_rev-A.pdf",
+    "change": "First issue."
+  }
+]

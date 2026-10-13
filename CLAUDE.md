@@ -16,9 +16,11 @@ This project is a proof of concept. Keep everything as simple as possible.
 
 These apply to every feature.
 
-- **Sources.** The assistant searches the database and documents. Today only the `products` table (construction materials and their properties) is searchable. Document search is planned and not built yet; do not assume a documents feature exists.
+- **Sources.** The assistant has two sources, both reached only through tools: the product catalogue (`products`: construction materials and their properties) and the product data sheets (`documents`: one row per revision, with the extracted PDF text and the PDF itself).
 - **Current version only.** Documents exist in many versions. Search, retrieval and answers use the most current version of each document by default. Do not return, quote or mix older versions into an answer unless the user explicitly asks for a past version or a comparison, and then label which version each statement comes from.
 - **Enforce it in code.** Apply "latest version" in the data-access layer and in any search index, the same way `visibleToBot` is applied today. Never rely on the model's prompt alone. Any design for document storage, ingestion or indexing must make "which version is current" an explicit, queryable fact, and must stop a superseded version from being served once a newer one arrives.
+- **How documents enforce it.** `DocumentsService` (`apps/api/src/documents`) is the only access to data sheets. Every read starts from its private `current()`, which puts `is_current` and the product's `visible_to_bot` in the SQL, and it has no method that takes a revision. `ingest()` is for the ingestion script only and decides which revision is current itself (latest `issueDate`, then the higher revision); a partial unique index allows one current revision per document number. No tool or endpoint can read a superseded revision yet; when asked for one, the assistant says only the current revision is available.
+- **Citations.** Every answer carries its sources in `done.sources`. They are built in code (`apps/api/src/chat/sources.ts`) from what the tools returned in that turn, never from model text. A tool that returns citable records must return `sources`. A catalogue source also carries `dataSheet`, the reference (document number, revision, issue date, link) of the product's current data sheet, looked up in code by `DocumentsService.getCurrentReferences`, so every citation shows a revision. It stays a catalogue citation: the answer was read from the catalogue.
 - **Visibility.** Tools reach only records marked visible to the bot. A hidden record and a non-existent one must be indistinguishable to the model and the user.
 - **Product page.** `GET /api/products` returns every bot-visible product (the same set the assistant sees) through `ProductsService`. A chat request may carry `productSku`, the product the user has open; the API looks it up with `getBySku` and, only if found, prefixes the user's message with a context line built from the database row. A hidden or unknown SKU is ignored silently. The web app starts a new conversation whenever the selected product changes.
 
@@ -51,14 +53,17 @@ Delegate work to the agent that owns the area.
 - `packages/chat-contract`: types shared by both apps (declarations only, import with `import type`).
 - `compose.yaml`: dev Postgres on port 5434, plus `migrate` (migrations and seed), `api` and `web` (nginx). There are no profiles: `docker compose up --build` runs the whole stack on http://localhost:8088. Dockerfiles are in `apps/api` and `apps/web`, built with the repo root as context.
 
-Not built yet: sign-in, saved conversations and document search. The chat endpoint is unauthenticated and rate limited per client IP.
+- `apps/api/src/documents`: data sheet access (`DocumentsService`), the ingestion script, and `GET /api/documents/:documentNumber/file`, which serves the current PDF.
+- `sample-documents`: example product data sheet PDFs, loaded into `documents` by `db:ingest-docs`. `manifest.json` lists each file's SKU, revision, issue date and whether it is the current revision; two products have three revisions (A, B, C) whose older values differ from the catalogue on purpose.
+
+Not built yet: sign-in, saved conversations, and reading or comparing past revisions of a document. The chat endpoint is unauthenticated and rate limited per client IP.
 
 ## Commands
 
 Run from the repo root unless noted.
 
 - Dev: `npm run db:up`, `npm run api:dev`, `npm run web:dev` (http://localhost:4200)
-- Database: `npm run db:deploy -w api` (apply migrations), `npm run db:seed -w api` (sample products, idempotent)
+- Database: `npm run db:deploy -w api` (apply migrations), `npm run db:seed -w api` (sample products, idempotent), `npm run db:ingest-docs -w api` (sample data sheets from `sample-documents` or `DOCS_DIR`; safe to re-run)
 - API checks: `npm run build -w api`, `npm run lint -w api`, `npm test -w api`, `npm run test:e2e -w api`
 - Web checks: `npm run build -w web`, `npm run test -w web -- --watch=false`
 - Schema change: edit `apps/api/src/prisma/contract.prisma`, then `npm run db:plan -w api -- --name <slug>`, read the plan, then `npm run db:migrate -w api`
@@ -78,5 +83,6 @@ Run from the repo root unless noted.
 - Stop the dev database with `npm run db:down`, which keeps its data. `docker compose down` stops the Docker stack and the dev database together; `docker compose down -v` deletes the data. Never run `down -v` without asking.
 - The Docker stack shares the dev database. Its `migrate` job applies the migrations in the working tree and re-runs the seed on every `up`.
 - `docker compose config` prints the Gemini key in clear text, because it expands `apps/api/.env`. Do not run it with visible output.
-- e2e tests run against the dev database, migrated and seeded. Do not modify the seeded `products` rows in tests.
+- e2e tests run against the dev database, migrated, seeded and with the data sheets ingested. Do not modify the seeded `products` rows in tests.
+- `test/documents.e2e-spec.ts` writes rows numbered `TEST-DS-<run>-…` and deletes them afterwards. While it runs, the current data sheet of `FRT-MAS-AAC100` is a fake, so do not assert on that SKU's data sheet in other e2e files.
 - Do not commit unless asked.

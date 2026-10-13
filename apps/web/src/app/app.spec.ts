@@ -5,7 +5,7 @@ import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { MatSidenavHarness } from '@angular/material/sidenav/testing';
-import { FakeStream, fakeFetch, settle } from '../testing/fake-chat-stream';
+import { FakeStream, done, fakeFetch, settle } from '../testing/fake-chat-stream';
 import { PRODUCTS } from '../testing/products';
 import { App } from './app';
 
@@ -71,7 +71,7 @@ describe('App', () => {
   }
 
   async function finish(stream: FakeStream, interactionId: string): Promise<void> {
-    await stream.emit('done', { interactionId, usage: null });
+    await stream.emit('done', done(interactionId));
     await stream.close();
     await fixture.whenStable();
   }

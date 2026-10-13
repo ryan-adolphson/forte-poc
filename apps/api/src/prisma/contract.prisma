@@ -16,3 +16,33 @@ model Product {
 
   @@map("products")
 }
+
+// One row is ONE revision of ONE document (a product data sheet). Read only through
+// DocumentsService, which serves the current revision of a bot-visible product and nothing else.
+model Document {
+  id             Int                        @id @default(autoincrement())
+  documentNumber String                     @map("document_number")
+  revision       String
+  kind           String                     @default("datasheet")
+  title          String
+  productId      Int                        @map("product_id")
+  // Restrict: a product cannot be deleted while it still has data sheets.
+  product        Product                    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  issueDate      DateString                 @map("issue_date")
+  // "Which revision is current" is a stored fact, recomputed by DocumentsService.ingest().
+  isCurrent      Boolean                    @default(false) @map("is_current")
+  changeNote     String?                    @map("change_note")
+  // Extracted full text of the PDF, for search and for the model to read.
+  text           String
+  fileName       String                     @map("file_name")
+  // The PDF itself.
+  content        Bytes
+  createdAt      TimestamptzString          @default(now()) @map("created_at")
+  updatedAt      temporal.updatedAtString() @map("updated_at")
+
+  @@unique([documentNumber, revision])
+  // At most one current revision per document number, enforced by the database.
+  @@index([documentNumber], where: "is_current", unique: true, name: "documents_one_current")
+  @@index([productId])
+  @@map("documents")
+}

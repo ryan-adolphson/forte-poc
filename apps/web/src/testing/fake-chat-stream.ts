@@ -1,4 +1,4 @@
-import type { ChatEventMap, ChatEventName } from '@forte/chat-contract';
+import type { ChatEventMap, ChatEventName, ChatSource, DataSheetReference } from '@forte/chat-contract';
 
 /** One faked `POST /api/chat/stream` exchange whose event stream the test drives by hand. */
 export interface FakeStream {
@@ -9,6 +9,43 @@ export interface FakeStream {
   /** Ends the response body, as a closed connection would. */
   close(): Promise<void>;
 }
+
+/** The data of a `done` event: a completed turn that drew on `sources`. */
+export const done = (interactionId: string, sources: ChatSource[] = []): ChatEventMap['done'] => ({
+  interactionId,
+  usage: null,
+  sources,
+});
+
+export const DATA_SHEET: ChatSource = {
+  kind: 'datasheet',
+  sku: 'FRT-CON-C3240',
+  productName: 'Ready-Mix Concrete C32/40',
+  documentNumber: 'DS-FRT-CON-C3240',
+  revision: 'C',
+  issueDate: '2026-01-19',
+  url: '/api/documents/DS-FRT-CON-C3240/file',
+};
+
+/** A catalogue entry of a product that has no data sheet. */
+export const CATALOGUE_ENTRY: ChatSource = {
+  kind: 'catalogue',
+  sku: 'FRT-CON-C3240',
+  productName: 'Ready-Mix Concrete C32/40',
+};
+
+export const DATA_SHEET_REFERENCE: DataSheetReference = {
+  documentNumber: 'DS-FRT-CON-C3240',
+  revision: 'C',
+  issueDate: '2026-01-19',
+  url: '/api/documents/DS-FRT-CON-C3240/file',
+};
+
+/** A catalogue entry with the reference of the product's current data sheet. */
+export const CATALOGUE_ENTRY_WITH_SHEET: ChatSource = {
+  ...CATALOGUE_ENTRY,
+  dataSheet: DATA_SHEET_REFERENCE,
+};
 
 /** Lets pending promise callbacks (fetch, stream reads) run. */
 export const settle = () => new Promise<void>((resolve) => setTimeout(resolve));

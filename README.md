@@ -30,6 +30,7 @@ cp apps/api/.env.example apps/api/.env    # then set GEMINI_API_KEY (see below)
 npm run db:up                             # PostgreSQL 17 on 127.0.0.1:5434, waits until healthy
 npm run db:deploy -w api                  # apply migrations (safe to re-run)
 npm run db:seed -w api                    # sample products (idempotent; development only)
+npm run db:ingest-docs -w api             # sample data sheets (23 PDFs, 19 current; idempotent)
 ```
 
 ### Gemini API key
@@ -53,8 +54,8 @@ Open <http://localhost:4200>. `npm run db:down` stops the database and keeps its
 
 ## Run everything in Docker
 
-One command builds and runs the whole stack: PostgreSQL, a one-off `migrate` job (migrations, then
-the sample products), the API, and nginx serving the web app and proxying `/api/` to the API.
+One command builds and runs the whole stack: PostgreSQL, a one-off `migrate` job (migrations, the
+sample products, then the sample data sheets), the API, and nginx serving the web app and proxying `/api/` to the API.
 
 ```bash
 docker compose up --build    # add -d --wait to run it in the background
@@ -112,7 +113,7 @@ Run it locally only.
 npm run build -w api       # type-check and compile the API
 npm run lint -w api
 npm test -w api            # unit tests
-npm run test:e2e -w api    # end-to-end tests; need the dev database up, migrated and seeded
+npm run test:e2e -w api    # end-to-end tests; need the dev database up, migrated, seeded and with the data sheets ingested
 npm run build -w web       # production build of the web app, checked against its size budgets
 npm run test -w web -- --watch=false    # web unit tests
 ```
@@ -135,6 +136,15 @@ The seed in [apps/api/src/prisma/seed-data.ts](apps/api/src/prisma/seed-data.ts)
 fictional products in seven categories: concrete, reinforcing steel, structural steel, timber,
 masonry, insulation, and cement and mortar. Values are typical figures for illustration, not a
 manufacturer's data sheets. Two products are marked hidden from the assistant.
+
+## Sample data sheets
+
+[sample-documents/manifest.json](sample-documents/manifest.json) lists 23 one-page PDFs: one data
+sheet per assistant-visible product, and two products with revisions A to C whose older values
+differ on purpose. The assistant reads only the current revision of each, and each answer lists
+its sources. Every source shows a data sheet revision: a data sheet source its own, a catalogue
+source the current data sheet of that product. `GET /api/documents/<document number>/file` serves the current PDF, for example
+<http://localhost:3000/api/documents/DS-FRT-CON-C3240/file>.
 
 ## Adding a chat tool
 

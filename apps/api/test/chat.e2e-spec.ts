@@ -69,13 +69,38 @@ describe('POST /api/chat/stream', () => {
       { event: 'text', data: { delta: '40 MPa.' } },
       {
         event: 'done',
-        data: { interactionId: 'v1_b', usage: { inputTokens: 14, outputTokens: 24, totalTokens: 38 } },
+        data: {
+          interactionId: 'v1_b',
+          usage: { inputTokens: 14, outputTokens: 24, totalTokens: 38 },
+          // A catalogue answer, with the current revision of the product's data sheet
+          // (needs the ingested data sheets: `npm run db:ingest-docs -w api`).
+          sources: [
+            {
+              kind: 'catalogue',
+              sku: 'FRT-CON-C3240',
+              productName: 'Ready-Mix Concrete C32/40',
+              dataSheet: {
+                documentNumber: 'DS-FRT-CON-C3240',
+                revision: 'C',
+                issueDate: '2026-01-19',
+                url: '/api/documents/DS-FRT-CON-C3240/file',
+              },
+            },
+          ],
+        },
       },
     ]);
 
     expect(gemini.requests[0]!.input).toBe('What is the cube strength of C32/40?');
-    // The function result sent back to the model came from the real ProductsService.
-    expect(JSON.stringify(gemini.requests[1]!.input)).toContain('Ready-Mix Concrete C32/40');
+    // The function result sent back to the model came from the real ProductsService, with
+    // the reference from the real DocumentsService: the current revision, and no sheet text.
+    const [functionResult] = gemini.requests[1]!.input as { result: { text: string }[] }[];
+    const given = JSON.parse(functionResult!.result[0]!.text) as { product: Record<string, unknown> };
+    expect(given.product).toMatchObject({
+      name: 'Ready-Mix Concrete C32/40',
+      dataSheet: { documentNumber: 'DS-FRT-CON-C3240', revision: 'C', issueDate: '2026-01-19' },
+    });
+    expect(Object.keys(given.product.dataSheet as object)).toHaveLength(3);
     // No raw provider event reaches the client.
     expect(response.text).not.toMatch(/event_type|step\.delta|interaction\./);
   });
@@ -102,7 +127,10 @@ describe('POST /api/chat/stream', () => {
 describe('POST /api/chat/stream with productSku', () => {
   let app: INestApplication<App>;
   const gemini = fakeGemini(textTurn('v1_a', ['ok']));
-  const DONE = { event: 'done', data: { interactionId: 'v1_a', usage: expect.any(Object) as unknown } };
+  const DONE = {
+    event: 'done',
+    data: { interactionId: 'v1_a', usage: expect.any(Object) as unknown, sources: [] },
+  };
 
   beforeAll(async () => {
     app = await createApp(gemini);
@@ -136,6 +164,89 @@ describe('POST /api/chat/stream with productSku', () => {
     expect(gemini.requests.at(-1)).toEqual(plainRequest);
     expect(gemini.requests.at(-1)!.input).toBe('What is this product?');
     expect(JSON.stringify(gemini.requests.at(-1))).not.toMatch(/Heritage|H28/);
+  });
+});
+
+// Needs the data sheets in the dev database: `npm run db:ingest-docs -w api`. Read-only.
+describe('POST /api/chat/stream with data sheets', () => {
+  let app: INestApplication<App>;
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  const ask = async (gemini: ReturnType<typeof fakeGemini>, message: string) => {
+    app = await createApp(gemini);
+    const response = await request(app.getHttpServer()).post('/api/chat/stream').send({ message }).expect(200);
+    return parseEvents(response.text);
+  };
+
+  it('reads the current revision through get_data_sheet and cites it in done', async () => {
+    const gemini = fakeGemini(
+      functionCallTurn('v1_a', [{ id: 'call_1', name: 'get_data_sheet', argumentsJson: '{"sku":"FRT-CON-C3240"}' }]),
+      textTurn('v1_b', ['Cure for at least 7 days ', '(data sheet DS-FRT-CON-C3240, Rev C, issued 2026-01-19).']),
+    );
+
+    const events = await ask(gemini, 'How should the C32/40 concrete be cured?');
+
+    // What the model was given: the Rev C sheet from the real DocumentsService.
+    const [functionResult] = gemini.requests[1]!.input as { result: { text: string }[] }[];
+    const given = JSON.parse(functionResult!.result[0]!.text) as { found: boolean; dataSheet: Record<string, string> };
+    expect(given.found).toBe(true);
+    expect(given.dataSheet).toMatchObject({
+      documentNumber: 'DS-FRT-CON-C3240',
+      revision: 'C',
+      issueDate: '2026-01-19',
+      sku: 'FRT-CON-C3240',
+      productName: 'Ready-Mix Concrete C32/40',
+    });
+    const text = given.dataSheet.text!;
+    expect(text).toContain('Density 2380 kg/m³ EN 12390-7');
+    expect(text).toContain('cure for at least 7 days');
+    expect(text).toContain('Exposure class XC4, XD1 EN 206');
+    // Rev A's values are not the stated ones: no property row carries them.
+    expect(text).not.toContain('Exposure class XC3, XC4');
+    expect(text).not.toMatch(/Density 2400/);
+    expect(text).not.toMatch(/Revision [AB]\b/);
+
+    expect(events.map((event) => event.event)).toEqual(['start', 'tool', 'tool', 'text', 'text', 'done']);
+    expect(events.at(-1)!.data).toMatchObject({
+      sources: [
+        {
+          kind: 'datasheet',
+          sku: 'FRT-CON-C3240',
+          productName: 'Ready-Mix Concrete C32/40',
+          documentNumber: 'DS-FRT-CON-C3240',
+          revision: 'C',
+          issueDate: '2026-01-19',
+          url: '/api/documents/DS-FRT-CON-C3240/file',
+        },
+      ],
+    });
+    // The cited link serves a PDF.
+    await request(app.getHttpServer())
+      .get('/api/documents/DS-FRT-CON-C3240/file')
+      .expect(200)
+      .expect('Content-Type', 'application/pdf');
+  });
+
+  it("treats a hidden product's data sheet like one that does not exist, with no sources", async () => {
+    const gemini = fakeGemini(
+      functionCallTurn('v1_a', [
+        { id: 'call_1', name: 'get_data_sheet', argumentsJson: JSON.stringify({ sku: hiddenSkus[0] }) },
+        { id: 'call_2', name: 'get_data_sheet', argumentsJson: '{"sku":"FRT-NOPE-0000"}' },
+        { id: 'call_3', name: 'search_data_sheets', argumentsJson: '{"query":"Heritage"}' },
+      ]),
+      textTurn('v1_b', ['I do not have that information.']),
+    );
+
+    const events = await ask(gemini, 'What does the data sheet of Heritage Mix H28 say?');
+
+    const results = (gemini.requests[1]!.input as { result: { text: string }[] }[]).map(
+      (step) => step.result[0]!.text,
+    );
+    expect(results).toEqual(['{"found":false}', '{"found":false}', '{"count":0,"dataSheets":[]}']);
+    expect(events.at(-1)!.data).toMatchObject({ sources: [] });
   });
 });
 

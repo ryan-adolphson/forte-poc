@@ -15,12 +15,14 @@ import { MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { Chat } from './chat';
+import { ChatSources } from './chat-sources';
 import { ProductCard } from './product-card';
 
 const MAX_LENGTH = 2000;
 
 @Component({
   imports: [
+    ChatSources,
     FormField,
     CdkTextareaAutosize,
     MatButton,
@@ -82,13 +84,16 @@ export class ChatPanel {
   /**
    * Text for the polite live region. It is empty while a reply is being written and becomes the
    * whole reply when the turn ends, so a screen reader hears each reply once, not every token.
+   * The sources are only counted here; the list itself follows the answer in the page.
    */
   protected readonly announcement = computed(() => {
     const last = this.chat.messages().at(-1);
     if (this.chat.busy() || last?.role !== 'assistant') {
       return '';
     }
-    const parts = [last.text, last.stopped ? 'Stopped.' : '', last.error ?? ''];
+    const count = last.sources?.length ?? 0;
+    const sources = count ? `${count} source${count === 1 ? '' : 's'}.` : '';
+    const parts = [last.text, last.stopped ? 'Stopped.' : '', last.error ?? '', sources];
     return `Assistant: ${parts.filter(Boolean).join(' ')}`;
   });
 

@@ -1,0 +1,203 @@
+[
+  {
+    "id": "table.documents",
+    "label": "Create table \"documents\"",
+    "summary": "Creates table \"documents\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "documents"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"documents\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"documents\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"documents\"",
+        "sql": "CREATE TABLE \"public\".\"documents\" (\n  \"change_note\" text,\n  \"content\" bytea NOT NULL,\n  \"created_at\" timestamptz DEFAULT (now()) NOT NULL,\n  \"document_number\" text NOT NULL,\n  \"file_name\" text NOT NULL,\n  \"id\" SERIAL NOT NULL,\n  \"is_current\" bool DEFAULT false NOT NULL,\n  \"issue_date\" date NOT NULL,\n  \"kind\" text DEFAULT 'datasheet' NOT NULL,\n  \"product_id\" int4 NOT NULL,\n  \"revision\" text NOT NULL,\n  \"text\" text NOT NULL,\n  \"title\" text NOT NULL,\n  \"updated_at\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"documents\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"documents\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.documents.documents_document_number_revision_key",
+    "label": "Add unique constraint on \"documents\" (document_number, revision)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "documents_document_number_revision_key",
+        "table": "documents"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"documents_document_number_revision_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "documents_document_number_revision_key",
+          "public",
+          "\"public\".\"documents\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"documents_document_number_revision_key\"",
+        "sql": "ALTER TABLE \"public\".\"documents\" ADD CONSTRAINT \"documents_document_number_revision_key\" UNIQUE (\"document_number\", \"revision\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"documents_document_number_revision_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "documents_document_number_revision_key",
+          "public",
+          "\"public\".\"documents\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.documents.documents_one_current_485286a3",
+    "label": "Create index \"documents_one_current_485286a3\" on \"documents\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "documents_one_current_485286a3",
+        "table": "documents"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"documents_one_current_485286a3\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"documents_one_current_485286a3\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"documents_one_current_485286a3\"",
+        "sql": "CREATE UNIQUE INDEX \"documents_one_current_485286a3\" ON \"public\".\"documents\" (\"document_number\") WHERE (is_current)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"documents_one_current_485286a3\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"documents_one_current_485286a3\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.documents.documents_product_id_idx_22a2b7d2",
+    "label": "Create index \"documents_product_id_idx_22a2b7d2\" on \"documents\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "documents_product_id_idx_22a2b7d2",
+        "table": "documents"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"documents_product_id_idx_22a2b7d2\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"documents_product_id_idx_22a2b7d2\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"documents_product_id_idx_22a2b7d2\"",
+        "sql": "CREATE INDEX \"documents_product_id_idx_22a2b7d2\" ON \"public\".\"documents\" (\"product_id\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"documents_product_id_idx_22a2b7d2\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"documents_product_id_idx_22a2b7d2\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.documents.documents_product_id_fkey",
+    "label": "Add foreign key \"documents_product_id_fkey\" on \"documents\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "documents_product_id_fkey",
+        "table": "documents"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"documents_product_id_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "documents_product_id_fkey",
+          "public",
+          "\"public\".\"documents\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"documents_product_id_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"documents\"\nADD CONSTRAINT \"documents_product_id_fkey\"\nFOREIGN KEY (\"product_id\")\nREFERENCES \"public\".\"products\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"documents_product_id_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "documents_product_id_fkey",
+          "public",
+          "\"public\".\"documents\""
+        ]
+      }
+    ]
+  }
+]

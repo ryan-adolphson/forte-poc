@@ -22,12 +22,16 @@ COPY packages/chat-contract packages/chat-contract
 COPY apps/api apps/api
 RUN npm run build -w api
 
-# One-off job: apply migrations, then load the sample products. Both are idempotent.
+# One-off job: apply migrations, load the sample products, then ingest the sample data
+# sheets. All three are idempotent.
 # Needs the Prisma CLI (a devDependency), prisma.config.ts, the contract and migrations/.
 FROM build AS migrate
+# Where dist/documents/ingest.js looks by default. Only this image holds the PDFs:
+# the api serves them from the database.
+COPY sample-documents /app/sample-documents
 WORKDIR /app/apps/api
 USER node
-CMD ["sh", "-c", "/app/node_modules/.bin/prisma db migrate && node dist/prisma/seed.js"]
+CMD ["sh", "-c", "/app/node_modules/.bin/prisma db migrate && node dist/prisma/seed.js && node dist/documents/ingest.js"]
 
 # Runtime: production dependencies and compiled output only.
 FROM node:24-bookworm-slim AS runtime

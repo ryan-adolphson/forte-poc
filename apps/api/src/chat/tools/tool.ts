@@ -1,17 +1,34 @@
 import type { Interactions } from '@google/genai';
+import type { DocumentsService } from '../../documents/documents.service.js';
 import type { ProductsService } from '../../products/products.service.js';
+import type { SourceCandidate } from '../sources.js';
 
 /**
  * What a tool hands back to the model. A failure is a result too: the model reads the
  * error and can correct its call, so a bad argument never ends the turn.
  */
-export type ToolResult = { ok: true; data: unknown } | { ok: false; error: string };
+export type ToolResult =
+  | {
+      ok: true;
+      /** Sent to the model as JSON. */
+      data: unknown;
+      /**
+       * The records in `data` that an answer can be attributed to (see `../sources.ts`).
+       * Never sent to the model: the citations shown to the user are built from this.
+       */
+      sources?: SourceCandidate[];
+    }
+  | { ok: false; error: string };
 
 export interface ChatTool {
   /** The function declaration sent to Gemini on every request. */
   declaration: Interactions.Function & { name: string };
   /** `args` comes from the model and is untrusted: validate before use. */
-  run(args: Record<string, unknown>, products: ProductsService): Promise<ToolResult>;
+  run(
+    args: Record<string, unknown>,
+    products: ProductsService,
+    documents: DocumentsService,
+  ): Promise<ToolResult>;
 }
 
 /**

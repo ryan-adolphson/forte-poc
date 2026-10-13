@@ -1,5 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { FakeStream, fakeFetch, settle } from '../testing/fake-chat-stream';
+import {
+  CATALOGUE_ENTRY,
+  DATA_SHEET,
+  FakeStream,
+  done,
+  fakeFetch,
+  settle,
+} from '../testing/fake-chat-stream';
 import { PRODUCTS } from '../testing/products';
 import { Chat } from './chat';
 
@@ -55,19 +62,24 @@ describe('Chat', () => {
     expect(reply().text).toBe('We stock C24 and GL28h.');
     expect(chat.interactionId()).toBeNull();
 
-    await stream.emit('done', { interactionId: 'int-1', usage: null });
+    await stream.emit('done', done('int-1'));
     await stream.close();
     await sending;
 
     expect(chat.status()).toBe('idle');
     expect(chat.interactionId()).toBe('int-1');
-    expect(reply()).toEqual({ id: reply().id, role: 'assistant', text: 'We stock C24 and GL28h.' });
+    expect(reply()).toEqual({
+      id: reply().id,
+      role: 'assistant',
+      text: 'We stock C24 and GL28h.',
+      sources: [],
+    });
   });
 
   it('sends previousInteractionId on the next message', async () => {
     const streams = fakeFetch();
     const first = await open(streams, 'one');
-    await first.emit('done', { interactionId: 'int-1', usage: null });
+    await first.emit('done', done('int-1'));
     await first.close();
 
     const second = await open(streams, 'two');
@@ -104,7 +116,11 @@ describe('Chat', () => {
     expect(chat.activity()).toBe('Listing the catalogue…');
     await stream.emit('tool', { name: 'list_categories', status: 'started' });
     expect(chat.activity()).toBe('Checking the product categories…');
-    await stream.emit('done', { interactionId: 'int-1', usage: null });
+    await stream.emit('tool', { name: 'get_data_sheet', status: 'started' });
+    expect(chat.activity()).toBe('Reading the data sheet…');
+    await stream.emit('tool', { name: 'search_data_sheets', status: 'started' });
+    expect(chat.activity()).toBe('Searching the data sheets…');
+    await stream.emit('done', done('int-1'));
     await stream.close();
     expect(chat.activity()).toBeNull();
   });
@@ -112,7 +128,7 @@ describe('Chat', () => {
   it('keeps partial text, records an error event and keeps the old interaction id', async () => {
     const streams = fakeFetch();
     const first = await open(streams, 'one');
-    await first.emit('done', { interactionId: 'int-1', usage: null });
+    await first.emit('done', done('int-1'));
     await first.close();
 
     const second = await open(streams, 'two');
@@ -208,7 +224,7 @@ describe('Chat', () => {
   it('stop aborts the request, keeps the text and the old interaction id', async () => {
     const streams = fakeFetch();
     const first = await open(streams, 'one');
-    await first.emit('done', { interactionId: 'int-1', usage: null });
+    await first.emit('done', done('int-1'));
     await first.close();
 
     const second = await open(streams, 'two');
@@ -233,7 +249,7 @@ describe('Chat', () => {
     await settle();
     expect(streams[1].body).toEqual({ message: 'the question' });
     await streams[1].emit('text', { delta: 'Answer' });
-    await streams[1].emit('done', { interactionId: 'int-2', usage: null });
+    await streams[1].emit('done', done('int-2'));
     await streams[1].close();
 
     expect(chat.messages().map((m) => [m.role, m.text, m.error])).toEqual([
@@ -245,7 +261,7 @@ describe('Chat', () => {
   it('new chat clears the messages and the interaction id, also mid-reply', async () => {
     const streams = fakeFetch();
     const first = await open(streams, 'one');
-    await first.emit('done', { interactionId: 'int-1', usage: null });
+    await first.emit('done', done('int-1'));
     await first.close();
     const second = await open(streams, 'two');
     await second.emit('text', { delta: 'So far' });
@@ -267,7 +283,7 @@ describe('Chat', () => {
     const streams = fakeFetch();
     const general = await open(streams, 'one');
     expect(general.body).toEqual({ message: 'one' });
-    await general.emit('done', { interactionId: 'int-1', usage: null });
+    await general.emit('done', done('int-1'));
     await general.close();
 
     chat.selectProduct(PRODUCTS[0]);
@@ -277,7 +293,7 @@ describe('Chat', () => {
       message: 'What is its strength?',
       productSku: 'CON-C3240',
     });
-    await first.emit('done', { interactionId: 'int-2', usage: null });
+    await first.emit('done', done('int-2'));
     await first.close();
 
     const second = await open(streams, 'And its density?');
@@ -292,7 +308,7 @@ describe('Chat', () => {
     const streams = fakeFetch();
     chat.selectProduct(PRODUCTS[0]);
     const first = await open(streams, 'one');
-    await first.emit('done', { interactionId: 'int-1', usage: null });
+    await first.emit('done', done('int-1'));
     await first.close();
     const second = await open(streams, 'two');
     await second.emit('text', { delta: 'So far' });
@@ -306,7 +322,7 @@ describe('Chat', () => {
 
     const third = await open(streams, 'three');
     expect(third.body).toEqual({ message: 'three', productSku: 'CON-C2025' });
-    await third.emit('done', { interactionId: 'int-3', usage: null });
+    await third.emit('done', done('int-3'));
     await third.close();
 
     chat.selectProduct(null);
@@ -325,7 +341,7 @@ describe('Chat', () => {
     const streams = fakeFetch();
     chat.selectProduct(PRODUCTS[0]);
     const first = await open(streams, 'one');
-    await first.emit('done', { interactionId: 'int-1', usage: null });
+    await first.emit('done', done('int-1'));
     await first.close();
     const second = await open(streams, 'two');
     await second.emit('text', { delta: 'So far' });
@@ -336,15 +352,98 @@ describe('Chat', () => {
     expect(chat.interactionId()).toBe('int-1');
     expect(chat.status()).toBe('streaming');
 
-    await second.emit('done', { interactionId: 'int-2', usage: null });
+    await second.emit('done', done('int-2'));
     await second.close();
     chat.selectProduct(null);
     chat.selectProduct(null);
     const general = await open(streams, 'three');
-    await general.emit('done', { interactionId: 'int-3', usage: null });
+    await general.emit('done', done('int-3'));
     await general.close();
     chat.selectProduct(null);
     expect(chat.messages()).toHaveLength(2);
     expect(chat.interactionId()).toBe('int-3');
+  });
+
+  describe('sources', () => {
+    const sources = () => chat.messages().map((m) => m.sources);
+
+    it('keeps the sources of each completed answer with that answer', async () => {
+      const streams = fakeFetch();
+      const first = await open(streams, 'one');
+      await first.emit('text', { delta: 'Cure for 7 days.' });
+      expect(reply().sources).toBeUndefined(); // still being written
+      await first.emit('done', done('int-1', [DATA_SHEET, CATALOGUE_ENTRY]));
+      await first.close();
+      expect(sources()).toEqual([undefined, [DATA_SHEET, CATALOGUE_ENTRY]]);
+
+      // A later turn does not touch the earlier answer's sources.
+      const second = await open(streams, 'two');
+      await second.emit('done', done('int-2', [CATALOGUE_ENTRY]));
+      await second.close();
+      const third = await open(streams, 'three');
+      await third.emit('done', done('int-3'));
+      await third.close();
+      expect(sources()).toEqual([
+        undefined,
+        [DATA_SHEET, CATALOGUE_ENTRY],
+        undefined,
+        [CATALOGUE_ENTRY],
+        undefined,
+        [],
+      ]);
+    });
+
+    it('has none on a turn that fails, is stopped or loses the connection', async () => {
+      const streams = fakeFetch();
+      const failed = await open(streams, 'one');
+      await failed.emit('text', { delta: 'Partial' });
+      await failed.emit('error', { code: 'model_error', message: 'The answer was cut off.' });
+      await failed.close();
+      expect(reply().error).toBe('The answer was cut off.');
+      expect(reply().sources).toBeUndefined();
+
+      const stopped = await open(streams, 'two');
+      await stopped.emit('text', { delta: 'So far' });
+      chat.stop();
+      await settle();
+      expect(reply().stopped).toBe(true);
+      expect(reply().sources).toBeUndefined();
+
+      const lost = await open(streams, 'three');
+      await lost.emit('text', { delta: 'Half' });
+      await lost.close();
+      expect(reply().error).toContain('Connection lost');
+      expect(reply().sources).toBeUndefined();
+    });
+
+    it('treats a done event without sources, from an older API, as no sources', async () => {
+      const streams = fakeFetch();
+      const stream = await open(streams, 'one');
+      await stream.emit('done', { interactionId: 'int-1', usage: null } as never);
+      await stream.close();
+      expect(reply().sources).toEqual([]);
+      expect(reply().error).toBeUndefined();
+    });
+
+    it('clears them with the messages on New chat and on a product change', async () => {
+      const streams = fakeFetch();
+      const first = await open(streams, 'one');
+      await first.emit('done', done('int-1', [DATA_SHEET]));
+      await first.close();
+      chat.newChat();
+      expect(chat.messages()).toEqual([]);
+
+      const second = await open(streams, 'two');
+      await second.emit('done', done('int-2', [DATA_SHEET]));
+      await second.close();
+      expect(reply().sources).toEqual([DATA_SHEET]);
+      chat.selectProduct(PRODUCTS[0]);
+      expect(chat.messages()).toEqual([]);
+
+      const third = await open(streams, 'three');
+      await third.emit('done', done('int-3'));
+      await third.close();
+      expect(sources()).toEqual([undefined, []]);
+    });
   });
 });

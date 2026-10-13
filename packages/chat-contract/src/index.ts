@@ -43,6 +43,55 @@ export interface ChatUsage {
   totalTokens: number;
 }
 
+/** Which data sheet, at which revision. Always the revision that was current when it was read. */
+export interface DataSheetReference {
+  /** For example `DS-FRT-CON-C3240`. */
+  documentNumber: string;
+  /** For example `C`. */
+  revision: string;
+  /** ISO date, `yyyy-mm-dd`. */
+  issueDate: string;
+  /**
+   * Path of the PDF on the API, for example `/api/documents/DS-FRT-CON-C3240/file`.
+   * It has no revision in it and always serves the revision that is current when opened.
+   */
+  url: string;
+}
+
+/**
+ * Where an answer came from. Built by the server from what the assistant's lookups
+ * returned in that turn, never from text the model wrote.
+ */
+export type ChatSource =
+  | {
+      /** The current revision of a product data sheet. */
+      kind: 'datasheet';
+      sku: string;
+      productName: string;
+      /** For example `DS-FRT-CON-C3240`. */
+      documentNumber: string;
+      /** For example `C`. */
+      revision: string;
+      /** ISO date, `yyyy-mm-dd`. */
+      issueDate: string;
+      /**
+       * Path of the PDF on the API, for example `/api/documents/DS-FRT-CON-C3240/file`.
+       * It has no revision in it and always serves the revision that is current when opened.
+       */
+      url: string;
+    }
+  | {
+      /** A product's entry in the catalogue. */
+      kind: 'catalogue';
+      sku: string;
+      productName: string;
+      /**
+       * The product's current data sheet, when it has one: the document of record for the
+       * product. The answer was read from the catalogue, not from this document.
+       */
+      dataSheet?: DataSheetReference;
+    };
+
 export type ChatErrorCode =
   | 'not_configured'
   | 'rate_limited'
@@ -55,7 +104,11 @@ export interface ChatEventMap {
   start: Record<string, never>;
   tool: { name: string; status: 'started' | 'finished' };
   text: { delta: string };
-  done: { interactionId: string; usage: ChatUsage | null };
+  /**
+   * `sources`: what the answer drew on, data sheets first. Empty when the answer used no
+   * source, for example when the assistant declined. At most 8.
+   */
+  done: { interactionId: string; usage: ChatUsage | null; sources: ChatSource[] };
   error: { code: ChatErrorCode; message: string };
 }
 

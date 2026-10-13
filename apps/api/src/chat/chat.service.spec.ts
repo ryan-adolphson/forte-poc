@@ -1,6 +1,7 @@
 import type { ChatEvent } from '@forte/chat-contract';
 import { errorTurn, fakeGemini, functionCallTurn, textTurn } from '../../test/fake-gemini.js';
 import type { AppConfig } from '../config/app.config.js';
+import type { DocumentsService } from '../documents/documents.service.js';
 import type { ProductsService } from '../products/products.service.js';
 import { ChatService, MAX_TOOL_ROUNDS } from './chat.service.js';
 import type { GeminiStream } from './gemini.js';
@@ -17,14 +18,43 @@ const product = {
   properties: [],
 };
 
+const dataSheet = {
+  documentNumber: 'DS-FRT-CON-C3240',
+  revision: 'C',
+  issueDate: '2026-01-19',
+  title: 'Ready-Mix Concrete C32/40 - Product data sheet',
+  sku: 'FRT-CON-C3240',
+  productName: 'Ready-Mix Concrete C32/40',
+  text: 'Handling and storage\n- Cure for at least 7 days.',
+};
+
+/** The same sheet as the catalogue tools see it: the reference only. */
+const reference = { documentNumber: 'DS-FRT-CON-C3240', revision: 'C', issueDate: '2026-01-19' };
+const CATALOGUE_SOURCE = {
+  kind: 'catalogue',
+  sku: 'FRT-CON-C3240',
+  productName: 'Ready-Mix Concrete C32/40',
+  dataSheet: { ...reference, url: '/api/documents/DS-FRT-CON-C3240/file' },
+};
+
 function setup(gemini: GeminiStream | null) {
+  const documents = {
+    getCurrentReferences: vi.fn().mockResolvedValue(new Map([[product.sku, reference]])),
+    getCurrentForSku: vi.fn().mockResolvedValue(dataSheet),
+    searchCurrent: vi.fn().mockResolvedValue([dataSheet]),
+  };
   const products = {
     search: vi.fn().mockResolvedValue([product]),
     getBySku: vi.fn().mockResolvedValue(product),
     listCategories: vi.fn().mockResolvedValue(['concrete']),
   };
-  const service = new ChatService(config, gemini, products as unknown as ProductsService);
-  return { service, products };
+  const service = new ChatService(
+    config,
+    gemini,
+    products as unknown as ProductsService,
+    documents as unknown as DocumentsService,
+  );
+  return { service, products, documents };
 }
 
 async function collect(
@@ -51,7 +81,12 @@ describe('ChatService.run', () => {
       { event: 'text', data: { delta: ', world' } },
       {
         event: 'done',
-        data: { interactionId: 'v1_a', usage: { inputTokens: 7, outputTokens: 12, totalTokens: 19 } },
+        data: {
+          interactionId: 'v1_a',
+          usage: { inputTokens: 7, outputTokens: 12, totalTokens: 19 },
+          // No tool ran, so there is nothing to cite.
+          sources: [],
+        },
       },
     ]);
     expect(gemini.requests).toHaveLength(1);
@@ -110,7 +145,7 @@ describe('ChatService.run', () => {
       expect(withSku.request.input).toBe('What is its compressive strength?');
       expect(JSON.stringify(withSku.requests)).not.toContain(productSku);
       expect(withSku.request.system_instruction).toBe(SYSTEM_PROMPT);
-      expect(withSku.request.tools).toHaveLength(4);
+      expect(withSku.request.tools).toHaveLength(6);
     });
 
     it('does not look anything up when no productSku is sent', async () => {
@@ -134,7 +169,7 @@ describe('ChatService.run', () => {
       expect(gemini.requests[0]!.input).toContain(CONTEXT);
       expect(JSON.stringify(gemini.requests[1]!.input)).not.toContain('Context from the product page');
       expect(gemini.requests[1]!.system_instruction).toBe(SYSTEM_PROMPT);
-      expect(gemini.requests[1]!.tools).toHaveLength(4);
+      expect(gemini.requests[1]!.tools).toHaveLength(6);
     });
   });
 
@@ -143,7 +178,7 @@ describe('ChatService.run', () => {
       functionCallTurn('v1_a', [{ id: 'call_1', name: 'get_product', argumentsJson: '{"sku":"FRT-CON-C3240"}' }]),
       textTurn('v1_b', ['40 MPa']),
     );
-    const { service, products } = setup(gemini.stream);
+    const { service, products, documents } = setup(gemini.stream);
 
     expect(await collect(service)).toEqual([
       { event: 'start', data: {} },
@@ -153,24 +188,144 @@ describe('ChatService.run', () => {
       {
         event: 'done',
         // The last interaction's id continues the conversation; usage is summed over both calls.
-        data: { interactionId: 'v1_b', usage: { inputTokens: 14, outputTokens: 24, totalTokens: 38 } },
+        data: {
+          interactionId: 'v1_b',
+          usage: { inputTokens: 14, outputTokens: 24, totalTokens: 38 },
+          // The answer names no product, so the one that was fetched on purpose is the source.
+          // It carries the revision of the product's current data sheet.
+          sources: [CATALOGUE_SOURCE],
+        },
       },
     ]);
     expect(products.getBySku).toHaveBeenCalledWith('FRT-CON-C3240');
+    // The reference came from the tool's own lookup: one query, no sheet text, no model round for it.
+    expect(documents.getCurrentReferences).toHaveBeenCalledExactlyOnceWith(['FRT-CON-C3240']);
+    expect(documents.getCurrentForSku).not.toHaveBeenCalled();
+    expect(gemini.requests).toHaveLength(2);
 
     const second = gemini.requests[1]!;
     expect(second.previous_interaction_id).toBe('v1_a');
     expect(second.system_instruction).toBe(SYSTEM_PROMPT);
-    expect(second.tools).toHaveLength(4);
+    expect(second.tools).toHaveLength(6);
     expect(second.input).toEqual([
       {
         type: 'function_result',
         name: 'get_product',
         call_id: 'call_1',
         is_error: false,
-        result: [{ type: 'text', text: JSON.stringify({ found: true, product }) }],
+        result: [{ type: 'text', text: JSON.stringify({ found: true, product: { ...product, dataSheet: reference } }) }],
       },
     ]);
+  });
+
+  describe('sources', () => {
+    const DATA_SHEET_SOURCE = {
+      kind: 'datasheet',
+      sku: 'FRT-CON-C3240',
+      productName: 'Ready-Mix Concrete C32/40',
+      documentNumber: 'DS-FRT-CON-C3240',
+      revision: 'C',
+      issueDate: '2026-01-19',
+      url: '/api/documents/DS-FRT-CON-C3240/file',
+    };
+    const call = (id: string, name: string, argumentsJson: string) => ({ id, name, argumentsJson });
+
+    it('gives the model the data sheet and cites it in done, built from the tool result', async () => {
+      const gemini = fakeGemini(
+        functionCallTurn('v1_a', [call('call_1', 'get_data_sheet', '{"sku":"frt-con-c3240"}')]),
+        // The model cites a revision the tool never returned; the source still says C.
+        textTurn('v1_b', ['Cure for at least 7 days ', '(data sheet DS-FRT-CON-C3240, Rev Z, issued 1999-01-01).']),
+      );
+      const { service, documents } = setup(gemini.stream);
+
+      const events = await collect(service, 'How should C32/40 be cured?');
+
+      expect(documents.getCurrentForSku).toHaveBeenCalledWith('frt-con-c3240');
+      expect(gemini.requests[1]!.input).toEqual([
+        {
+          type: 'function_result',
+          name: 'get_data_sheet',
+          call_id: 'call_1',
+          is_error: false,
+          // Only `data` goes to the model: no `sources`, no URL.
+          result: [{ type: 'text', text: JSON.stringify({ found: true, dataSheet }) }],
+        },
+      ]);
+      expect(events.at(-1)).toMatchObject({ event: 'done', data: { sources: [DATA_SHEET_SOURCE] } });
+      // `sources` arrives only in `done`.
+      expect(JSON.stringify(events.slice(0, -1))).not.toContain('sources');
+    });
+
+    it('collects over several tool rounds and puts the data sheet before the catalogue product', async () => {
+      const gemini = fakeGemini(
+        functionCallTurn('v1_a', [call('call_1', 'get_product', '{"sku":"FRT-CON-C3240"}')]),
+        functionCallTurn('v1_b', [call('call_2', 'get_data_sheet', '{"sku":"FRT-CON-C3240"}')]),
+        textTurn('v1_c', ['Ready-Mix Concrete C32/40 (FRT-CON-C3240): 40 MPa. Cure for 7 days.']),
+      );
+      const { service } = setup(gemini.stream);
+
+      const done = (await collect(service)).at(-1);
+
+      expect(done).toMatchObject({
+        event: 'done',
+        data: {
+          sources: [
+            DATA_SHEET_SOURCE,
+            // Fetched on purpose, so it stays, and it names the same current sheet.
+            CATALOGUE_SOURCE,
+          ],
+        },
+      });
+    });
+
+    it('cites a catalogue product without dataSheet when it has no data sheet, or the lookup finds none', async () => {
+      const gemini = fakeGemini(
+        functionCallTurn('v1_a', [call('call_1', 'search_products', '{"query":"C32/40"}')]),
+        // The model invents a reference; none reaches the source.
+        textTurn('v1_b', ['FRT-CON-C3240: 40 MPa (catalogue; data sheet DS-FRT-CON-C3240, Rev Z, issued 1999-01-01).']),
+      );
+      const { service, documents } = setup(gemini.stream);
+      documents.getCurrentReferences.mockResolvedValue(new Map());
+
+      const done = (await collect(service)).at(-1);
+
+      expect(done).toMatchObject({ event: 'done' });
+      expect(done!.data).toHaveProperty('sources', [
+        { kind: 'catalogue', sku: 'FRT-CON-C3240', productName: 'Ready-Mix Concrete C32/40' },
+      ]);
+      expect(JSON.stringify(gemini.requests[1]!.input)).not.toContain('dataSheet');
+    });
+
+    it('has no sources when the lookups found nothing', async () => {
+      const gemini = fakeGemini(
+        functionCallTurn('v1_a', [
+          call('call_1', 'get_data_sheet', '{"sku":"FRT-CON-H2835"}'),
+          call('call_2', 'search_data_sheets', '{"query":"heritage"}'),
+        ]),
+        textTurn('v1_b', ['I do not have that information.']),
+      );
+      const { service, documents } = setup(gemini.stream);
+      documents.getCurrentForSku.mockResolvedValue(null);
+      documents.searchCurrent.mockResolvedValue([]);
+
+      const events = await collect(service);
+
+      expect(events.at(-1)).toMatchObject({ event: 'done', data: { sources: [] } });
+      expect(JSON.stringify(gemini.requests[1]!.input)).toContain('{\\"found\\":false}');
+    });
+
+    it('carries no sources when the turn ends in an error after a successful lookup', async () => {
+      const gemini = fakeGemini(
+        functionCallTurn('v1_a', [call('call_1', 'get_data_sheet', '{"sku":"FRT-CON-C3240"}')]),
+        textTurn('v1_b', ['Cure for at le'], 'incomplete'),
+      );
+      const { service } = setup(gemini.stream);
+
+      const events = await collect(service);
+
+      expect(events.at(-1)?.event).toBe('error');
+      expect(JSON.stringify(events)).not.toMatch(/sources|DS-FRT-CON-C3240/);
+    });
   });
 
   it('runs parallel calls and returns every result in one request', async () => {

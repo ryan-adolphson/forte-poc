@@ -43,7 +43,9 @@
     <p class="error">{{ message.error }}</p>
     @if (message.retryable && $last && !chat.busy()) {
     <button matButton="outlined" type="button" (click)="retry()">Try again</button>
-    } }
+    } } @if (message.sources?.length) {
+    <app-chat-sources [sources]="message.sources!" />
+    }
   </article>
   }
 </section>
@@ -78,7 +80,7 @@
       <button matButton="filled" type="submit" [disabled]="!canSend()">Send</button>
     </div>
     <p id="ai-note" class="note">
-      Answers are written by an AI assistant from the product catalogue.
+      Answers are written by an AI assistant from the product catalogue and data sheets.
     </p>
   </form>
 </footer>

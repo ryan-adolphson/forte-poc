@@ -4,7 +4,17 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
 import { MatFormFieldHarness } from '@angular/material/form-field/testing';
 import { MatProgressSpinnerHarness } from '@angular/material/progress-spinner/testing';
-import { FakeStream, fakeFetch, settle } from '../testing/fake-chat-stream';
+import type { ChatSource } from '@forte/chat-contract';
+import {
+  CATALOGUE_ENTRY,
+  CATALOGUE_ENTRY_WITH_SHEET,
+  DATA_SHEET_REFERENCE,
+  DATA_SHEET,
+  FakeStream,
+  done,
+  fakeFetch,
+  settle,
+} from '../testing/fake-chat-stream';
 import { PRODUCTS } from '../testing/products';
 import { Chat } from './chat';
 import { ChatPanel } from './chat-panel';
@@ -110,7 +120,7 @@ describe('ChatPanel', () => {
     expect(streams).toHaveLength(1);
     expect(textarea().value).toBe('next question');
 
-    await rendered(streams[0].emit('done', { interactionId: 'int-1', usage: null }));
+    await rendered(streams[0].emit('done', done('int-1')));
     await rendered(streams[0].close());
     expect(await disabled('Send')).toBe(false);
     expect(await button('Stop')).toBeNull();
@@ -158,7 +168,7 @@ describe('ChatPanel', () => {
     expect(text.children).toHaveLength(0);
     expect(liveRegion()).toBe('');
 
-    await rendered(stream.emit('done', { interactionId: 'int-1', usage: null }));
+    await rendered(stream.emit('done', done('int-1')));
     await rendered(stream.close());
     expect(liveRegion()).toBe('Assistant: C32/40 reaches 40 MPa.\n<b>not html</b>');
   });
@@ -203,7 +213,7 @@ describe('ChatPanel', () => {
   it('New chat clears the conversation and focuses the message box', async () => {
     await type('q');
     await pressEnter();
-    await rendered(streams[0].emit('done', { interactionId: 'int-1', usage: null }));
+    await rendered(streams[0].emit('done', done('int-1')));
     await rendered(streams[0].close());
 
     await (await button('New chat'))!.click();
@@ -278,5 +288,153 @@ describe('ChatPanel', () => {
     fixture.componentInstance.closed.subscribe(() => closed++);
     await (await button('Close'))!.click();
     expect(closed).toBe(1);
+  });
+
+  describe('sources', () => {
+    const blocks = () => root.querySelectorAll('app-chat-sources');
+    const items = () =>
+      [...root.querySelectorAll('app-chat-sources li')].map((li) =>
+        li.textContent.replace(/\s+/g, ' ').trim(),
+      );
+
+    /** Asks a question and completes the answer with these sources. */
+    async function answer(sources: ChatSource[], text = 'Cure for 7 days.'): Promise<void> {
+      await type('q');
+      await pressEnter();
+      const stream = streams.at(-1)!;
+      await rendered(stream.emit('text', { delta: text }));
+      await rendered(stream.emit('done', done('int-1', sources)));
+      await rendered(stream.close());
+    }
+
+    it('links a data sheet to its PDF in a new tab, showing number, revision and date', async () => {
+      await answer([DATA_SHEET, CATALOGUE_ENTRY]);
+
+      const block = root.querySelectorAll('.message')[1].querySelector('app-chat-sources')!;
+      expect(block.querySelector('h4')!.textContent).toBe('Sources');
+      expect(block.querySelector('ul')).not.toBeNull();
+      const links = block.querySelectorAll('a');
+      expect(links).toHaveLength(1);
+      const link = links[0];
+      expect(link.getAttribute('href')).toBe('/api/documents/DS-FRT-CON-C3240/file');
+      expect(link.target).toBe('_blank');
+      expect(link.rel).toBe('noopener');
+      expect(items()[0]).toBe(
+        'Ready-Mix Concrete C32/40 data sheet · DS-FRT-CON-C3240 · Rev C · issued 19 Jan 2026PDF',
+      );
+      expect(link.getAttribute('aria-label')).toBe(
+        'Ready-Mix Concrete C32/40 data sheet · DS-FRT-CON-C3240 · Rev C · issued 19 Jan 2026 (PDF, opens in a new tab)',
+      );
+      expect(link.querySelector('.badge')!.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('shows a catalogue source without a data sheet as text, not a link', async () => {
+      await answer([CATALOGUE_ENTRY]);
+
+      expect(items()).toEqual(['Product catalogue · Ready-Mix Concrete C32/40 · FRT-CON-C3240']);
+      expect(root.querySelector('app-chat-sources a')).toBeNull();
+      expect(root.querySelector('app-chat-sources button')).toBeNull();
+    });
+
+    it("shows a catalogue source's current data sheet with its revision, linked to the PDF", async () => {
+      await answer([CATALOGUE_ENTRY_WITH_SHEET]);
+
+      expect(items()).toEqual([
+        // Two lines on screen: the entry is a block, the link follows it.
+        'Product catalogue · Ready-Mix Concrete C32/40 · FRT-CON-C3240' +
+          'Current data sheet · DS-FRT-CON-C3240 · Rev C · issued 19 Jan 2026PDF',
+      ]);
+      const links = root.querySelectorAll<HTMLAnchorElement>('app-chat-sources a');
+      expect(links).toHaveLength(1);
+      // The link is the data sheet only: the catalogue entry itself stays plain text.
+      expect(links[0].textContent).toBe('Current data sheet · DS-FRT-CON-C3240 · Rev C · issued 19 Jan 2026PDF');
+      expect(links[0].getAttribute('href')).toBe('/api/documents/DS-FRT-CON-C3240/file');
+      expect(links[0].target).toBe('_blank');
+      expect(links[0].rel).toBe('noopener');
+      expect(links[0].getAttribute('aria-label')).toBe(
+        'Ready-Mix Concrete C32/40 current data sheet · DS-FRT-CON-C3240 · Rev C · issued 19 Jan 2026 (PDF, opens in a new tab)',
+      );
+      expect(links[0].querySelector('.badge')!.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it.each(['https://evil.example/x', 'javascript:alert(1)', '//evil.example/api/documents/x/file', ''])(
+      "shows a catalogue source's data sheet as text when its url is %j",
+      async (url) => {
+        await answer([{ ...CATALOGUE_ENTRY, dataSheet: { ...DATA_SHEET_REFERENCE, url } } as ChatSource]);
+
+        expect(root.querySelector('app-chat-sources a')).toBeNull();
+        expect(root.querySelector('app-chat-sources')!.innerHTML).not.toContain('evil');
+        expect(items()).toEqual([
+          'Product catalogue · Ready-Mix Concrete C32/40 · FRT-CON-C3240 ' +
+            'Current data sheet · DS-FRT-CON-C3240 · Rev C · issued 19 Jan 2026',
+        ]);
+      },
+    );
+
+    it('shows no block for an answer without sources', async () => {
+      await answer([]);
+      expect(blocks()).toHaveLength(0);
+      expect(liveRegion()).toBe('Assistant: Cure for 7 days.');
+    });
+
+    it('shows no block while the answer is being written, or when it fails', async () => {
+      await type('q');
+      await pressEnter();
+      await rendered(streams[0].emit('tool', { name: 'get_data_sheet', status: 'started' }));
+      expect(messages()[1]).toContain('Reading the data sheet…');
+      await rendered(streams[0].emit('text', { delta: 'Cure for' }));
+      expect(blocks()).toHaveLength(0);
+
+      await rendered(streams[0].emit('error', { code: 'model_error', message: 'Cut off.' }));
+      await rendered(streams[0].close());
+      expect(blocks()).toHaveLength(0);
+      expect(liveRegion()).not.toContain('source');
+    });
+
+    it.each([
+      'https://evil.example/x',
+      'javascript:alert(1)',
+      '//evil.example/api/documents/x/file',
+      '/api/documents/\\evil.example',
+      '/api/other/DS-FRT-CON-C3240/file',
+      'api/documents/DS-FRT-CON-C3240/file',
+      '',
+    ])('does not make a link of the url %j', async (url) => {
+      await answer([{ ...DATA_SHEET, url } as ChatSource]);
+
+      expect(root.querySelector('app-chat-sources a')).toBeNull();
+      expect(root.querySelector('app-chat-sources')!.innerHTML).not.toContain('evil');
+      expect(items()).toEqual([
+        'Ready-Mix Concrete C32/40 data sheet · DS-FRT-CON-C3240 · Rev C · issued 19 Jan 2026',
+      ]);
+    });
+
+    it('never makes a link from the answer text', async () => {
+      await answer([], 'See https://evil.example/x or /api/documents/DS-1/file <a href="/x">x</a>');
+      expect(root.querySelector('.messages a')).toBeNull();
+    });
+
+    it('shows an unreadable issue date as it came', async () => {
+      await answer([{ ...DATA_SHEET, issueDate: 'January 2026' } as ChatSource]);
+      expect(items()[0]).toContain('issued January 2026');
+    });
+
+    it('announces the number of sources after the answer, not the list', async () => {
+      await answer([DATA_SHEET, CATALOGUE_ENTRY]);
+      expect(liveRegion()).toBe('Assistant: Cure for 7 days. 2 sources.');
+    });
+
+    it('announces a single source in the singular', async () => {
+      await answer([DATA_SHEET]);
+      expect(liveRegion()).toBe('Assistant: Cure for 7 days. 1 source.');
+    });
+
+    it('keeps each answer\'s sources under that answer', async () => {
+      await answer([DATA_SHEET]);
+      await answer([]);
+      const bubbles = root.querySelectorAll('.message');
+      expect(bubbles[1].querySelector('app-chat-sources')).not.toBeNull();
+      expect(bubbles[3].querySelector('app-chat-sources')).toBeNull();
+    });
   });
 });

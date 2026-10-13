@@ -20,7 +20,8 @@ services:
       timeout: 3s
       retries: 15
 
-  # One-off job: applies migrations, then loads the sample products. Safe on every `up`.
+  # One-off job: applies migrations, then loads the sample products and data sheets.
+  # Safe on every `up`.
   migrate:
     build:
       context: .
