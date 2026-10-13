@@ -19,6 +19,14 @@ function integer(env: Env, name: string, fallback: number, min = 1): number {
   return parsed;
 }
 
+function boolean(env: Env, name: string, fallback: boolean): boolean {
+  const value = optional(env, name);
+  if (value === undefined) return fallback;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  throw new Error(`Invalid environment: ${name} must be true or false`);
+}
+
 /** Reads and validates the environment. Throws an error naming the bad variable. */
 export function validateEnv(env: Env) {
   const databaseUrl = optional(env, 'DATABASE_URL');
@@ -36,6 +44,19 @@ export function validateEnv(env: Env) {
     chatRateTtlSeconds: integer(env, 'CHAT_RATE_TTL_SECONDS', 60),
     /** Reverse proxies in front of the API whose `X-Forwarded-For` is trusted. 0 = none. */
     trustProxy: integer(env, 'TRUST_PROXY', 0, 0),
+    /**
+     * The one shared sign-in. Both optional, so the seed, ingest and migrate jobs start
+     * without them; when either is missing nobody can sign in. Never log the password.
+     */
+    authUsername: optional(env, 'AUTH_USERNAME'),
+    authPassword: optional(env, 'AUTH_PASSWORD'),
+    /** Signs the session cookie. Undefined = a random one per process. Never log this. */
+    sessionSecret: optional(env, 'SESSION_SECRET'),
+    sessionTtlHours: integer(env, 'SESSION_TTL_HOURS', 12),
+    /** `Secure` on the session cookie. Off by default: dev and the Docker stack are plain HTTP. */
+    cookieSecure: boolean(env, 'COOKIE_SECURE', false),
+    /** Sign-in attempts allowed per client IP per minute. */
+    loginRateLimit: integer(env, 'LOGIN_RATE_LIMIT', 10),
   };
 }
 

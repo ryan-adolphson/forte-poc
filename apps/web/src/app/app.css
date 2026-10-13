@@ -63,6 +63,22 @@ h1 img {
   border-radius: 20%;
 }
 
+/* The signed-in name, pushed to the right with the Sign out button after it. */
+.user {
+  margin-inline-start: auto;
+  overflow: hidden;
+  font: var(--mat-sys-label-large);
+  text-overflow: ellipsis;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+/* On a phone only the button is shown. */
+@media (max-width: 30rem) {
+  .user {
+    visibility: hidden;
+  }
+}
+
 .nav {
   width: 14.5rem;
   --mat-sidenav-container-shape: 0;

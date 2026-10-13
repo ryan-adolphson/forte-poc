@@ -9,10 +9,12 @@ import { MatSidenavHarness } from '@angular/material/sidenav/testing';
 import { Title } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
+import { provideSignedIn } from '../testing/auth';
 import { DOCUMENTS } from '../testing/documents';
 import { FakeStream, done, fakeFetch, settle } from '../testing/fake-chat-stream';
 import { PRODUCTS } from '../testing/products';
 import { App } from './app';
+import { Chat } from './chat';
 import { routes } from './app.routes';
 
 describe('App', () => {
@@ -32,6 +34,7 @@ describe('App', () => {
         provideRouter(routes),
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideSignedIn(),
         { provide: MATERIAL_ANIMATIONS, useValue: { animationsDisabled: true } },
         { provide: BreakpointObserver, useValue: { observe: () => narrow } },
       ],
@@ -142,7 +145,7 @@ describe('App', () => {
 
       expect(root.querySelectorAll('h1')).toHaveLength(1);
       expect(root.querySelector('header mat-toolbar h1 img')!.getAttribute('alt')).toBe('Forte');
-      expect(root.querySelectorAll('mat-toolbar button')).toHaveLength(0);
+      expect(root.querySelector('mat-toolbar')!.textContent).not.toContain('Ask Forte');
       expect(root.querySelectorAll('header, nav, main')).toHaveLength(3);
       expect(root.querySelector('nav')!.getAttribute('aria-label')).toBe('Main');
       expect(root.querySelector('.skip')!.textContent).toBe('Skip to content');
@@ -172,6 +175,69 @@ describe('App', () => {
       root.querySelector<HTMLElement>('.skip')!.click();
       expect(document.activeElement).toBe(pageHeading());
       expect(path()).toBe('/products');
+    });
+  });
+
+  describe('signing in and out', () => {
+    const signOutButton = () =>
+      [...root.querySelectorAll<HTMLButtonElement>('mat-toolbar button')].find(
+        (b) => b.textContent.trim() === 'Sign out',
+      )!;
+
+    it('shows who is signed in and a Sign out button in the toolbar', async () => {
+      await visit('/');
+
+      expect(root.querySelector('mat-toolbar .user')!.textContent).toBe('someone');
+      expect(signOutButton()).toBeTruthy();
+    });
+
+    it('shows nothing before the first page is known', () => {
+      fixture.detectChanges();
+
+      expect(root.querySelector('mat-toolbar, nav, .panel, .skip, h1')).toBeNull();
+      expect(root.querySelector('main')!.textContent.trim()).toBe('');
+    });
+
+    it('signs out: tells the API, forgets the chat and shows the sign-in page alone', async () => {
+      const chat = TestBed.inject(Chat);
+      await visit('/products');
+      await ask('Ready-Mix Concrete C32/40');
+      await finish(await send('What is its strength?'), 'i-1');
+      expect(chat.product()).not.toBeNull();
+      expect(chat.messages()).toHaveLength(2);
+
+      signOutButton().click();
+      await settle();
+      http.expectOne({ method: 'POST', url: '/api/auth/logout' }).flush(null, {
+        status: 204,
+        statusText: 'No Content',
+      });
+      await vi.waitFor(() => expect(path()).toBe('/login'));
+      await fixture.whenStable();
+
+      expect(chat.product()).toBeNull();
+      expect(chat.messages()).toEqual([]);
+      expect(chat.interactionId()).toBeNull();
+      // No toolbar, navigation, chat panel or skip link: only the sign-in page.
+      expect(root.querySelector('mat-toolbar, nav, .panel, .skip, app-chat-panel')).toBeNull();
+      expect([...root.querySelectorAll('h1')].map((h) => h.textContent)).toEqual(['Sign in']);
+      expect(root.querySelector('main app-login-page')).not.toBeNull();
+    });
+
+    it('does not show a page of the app again after signing out', async () => {
+      await visit('/documents');
+
+      signOutButton().click();
+      await settle();
+      http.expectOne('/api/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+      await vi.waitFor(() => expect(path()).toBe('/login'));
+
+      await TestBed.inject(Router).navigateByUrl('/documents');
+      await fixture.whenStable();
+
+      expect(path()).toBe('/login?returnUrl=%2Fdocuments');
+      expect(root.querySelector('mat-toolbar')).toBeNull();
+      http.expectNone('/api/documents');
     });
   });
 

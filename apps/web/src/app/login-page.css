@@ -1,0 +1,45 @@
+/* The card sits in the middle of the page, on the page's own background. */
+:host {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: 1rem;
+}
+
+mat-card {
+  box-sizing: border-box;
+  width: min(100%, 22rem);
+  padding: 2rem 1.5rem;
+}
+
+/* The same corner rounding as the mark in the toolbar. */
+img {
+  border-radius: 20%;
+}
+
+h1 {
+  margin: 1rem 0 1.5rem;
+  font: var(--mat-sys-headline-small);
+}
+
+form {
+  display: grid;
+}
+
+/* Room between a field's message and the next field. */
+mat-form-field {
+  margin-bottom: 0.5rem;
+}
+
+.error {
+  margin: 0 0 1rem;
+  color: var(--mat-sys-error);
+}
+
+mat-spinner {
+  display: inline-block;
+  margin-inline-end: 0.5rem;
+  vertical-align: middle;
+  --mat-progress-spinner-active-indicator-color: currentColor;
+}

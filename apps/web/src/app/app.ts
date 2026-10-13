@@ -7,10 +7,11 @@ import {
   afterNextRender,
   inject,
   linkedSignal,
+  signal,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { MatIconButton } from '@angular/material/button';
+import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatListItem, MatListItemIcon, MatNavList } from '@angular/material/list';
 import { MatSidenav, MatSidenavContainer, MatSidenavContent } from '@angular/material/sidenav';
 import { MatToolbar } from '@angular/material/toolbar';
@@ -23,12 +24,15 @@ import {
   RouterOutlet,
 } from '@angular/router';
 import { map } from 'rxjs';
+import { Auth } from './auth';
+import { Chat } from './chat';
 import { ChatDrawer } from './chat-drawer';
 import { ChatPanel } from './chat-panel';
 
 @Component({
   imports: [
     ChatPanel,
+    MatButton,
     MatIconButton,
     MatListItem,
     MatListItemIcon,
@@ -47,8 +51,11 @@ import { ChatPanel } from './chat-panel';
   templateUrl: './app.html',
 })
 export class App {
+  protected readonly auth = inject(Auth);
   protected readonly drawer = inject(ChatDrawer);
+  private readonly chat = inject(Chat);
   private readonly injector = inject(Injector);
+  private readonly router = inject(Router);
   private readonly main = viewChild.required<ElementRef<HTMLElement>>('main');
 
   /** The destinations of the side navigation. `icon` is the path of a 24 by 24 line icon. */
@@ -80,10 +87,17 @@ export class App {
   /** Whether the navigation is open on a narrow screen. Crossing the breakpoint closes it. */
   protected readonly navOpen = linkedSignal({ source: this.narrow, computation: () => false });
 
+  /**
+   * Whether the toolbar, the navigation and the chat panel are shown: on every page but the
+   * sign-in page, and not before the first page is known. Set when a navigation ends, so the
+   * shell and the page change together.
+   */
+  protected readonly chrome = signal(false);
+
   constructor() {
     let first = true;
-    inject(Router)
-      .events.pipe(takeUntilDestroyed())
+    this.router.events
+      .pipe(takeUntilDestroyed())
       .subscribe((event) => {
         if (event instanceof NavigationStart) {
           // The chat panel belongs to the page it was opened on, and the Forte AI page shows the
@@ -91,12 +105,22 @@ export class App {
           this.drawer.opened.set(false);
           this.navOpen.set(false);
         } else if (event instanceof NavigationEnd) {
+          this.chrome.set(!event.urlAfterRedirects.startsWith('/login'));
           if (!first) {
             afterNextRender(() => this.showPageTop(), { injector: this.injector });
           }
           first = false; // the first page keeps the browser's own focus and scroll position
         }
       });
+  }
+
+  /** Signs out and forgets the conversation and the product it was about. */
+  protected async signOut(): Promise<void> {
+    await this.auth.logout();
+    this.drawer.opened.set(false);
+    this.chat.selectProduct(null);
+    this.chat.newChat();
+    await this.router.navigateByUrl('/login');
   }
 
   /** Scrolls to the top of the page and moves focus to its heading. */

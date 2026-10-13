@@ -155,6 +155,18 @@ describe('Chat', () => {
     expect(reply()).toMatchObject({ error: 'The assistant is not set up.', retryable: false });
   });
 
+
+  it('says the user was signed out on a 401, and is not left busy', async () => {
+    fakeFetch(() => json(401, { code: 'unauthenticated', message: 'Sign in first.' }));
+
+    await chat.send('What timber do you have?');
+
+    expect(chat.status()).toBe('idle');
+    expect(chat.messages().map((m) => m.role)).toEqual(['user', 'assistant']);
+    expect(reply().error).toBe('You were signed out. Sign in and try again.');
+    expect(reply().retryable).toBe(true);
+  });
+
   it('reports a rate limit with the Retry-After wait', async () => {
     fakeFetch(() =>
       json(429, { code: 'rate_limited', message: 'Too many messages.' }, { 'Retry-After': '42' }),

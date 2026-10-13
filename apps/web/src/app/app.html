@@ -1,9 +1,12 @@
+@if (chrome()) {
 <a class="skip" href="#content" (click)="showPageTop($event)">Skip to content</a>
+}
 
 <mat-sidenav-container class="shell">
   <!-- The chat about one product. In "over" mode Material traps focus in the panel, closes it on
        Escape or a click outside, and returns focus to the button that opened it. Its code loads
        when it first opens, and it is rendered only while open. -->
+  @if (chrome()) {
   <mat-sidenav
     #panel
     class="panel"
@@ -20,8 +23,10 @@
     <app-chat-panel (closed)="panel.close()" />
     } }
   </mat-sidenav>
+  }
 
   <mat-sidenav-content>
+    @if (chrome()) {
     <header>
       <mat-toolbar>
         @if (narrow()) {
@@ -38,12 +43,16 @@
         </button>
         }
         <h1><img ngSrc="forte-mark.png" width="36" height="36" alt="Forte" priority /></h1>
+        <span class="user">{{ auth.session()?.username }}</span>
+        <button matButton type="button" (click)="signOut()">Sign out</button>
       </mat-toolbar>
     </header>
+    }
 
     <mat-sidenav-container class="body">
       <!-- Beside the page on a wide screen. On a narrow one it opens over the page, with the
            same focus handling as the chat panel. -->
+      @if (chrome()) {
       <mat-sidenav
         class="nav"
         [mode]="narrow() ? 'over' : 'side'"
@@ -72,6 +81,7 @@
           </mat-nav-list>
         </nav>
       </mat-sidenav>
+      }
 
       <mat-sidenav-content>
         <main #main id="content">

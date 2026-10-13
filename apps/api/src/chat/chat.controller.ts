@@ -10,7 +10,8 @@ export class ChatController {
 
   /**
    * Streams one assistant turn as server-sent events (see `@forte/chat-contract`).
-   * The guard (429) and the validation pipe (400) both answer before the stream opens.
+   * The global session guard (401), then the rate limiter (429), then the validation pipe
+   * (400) all answer before the stream opens.
    */
   @Post('stream')
   @UseGuards(ChatThrottlerGuard)

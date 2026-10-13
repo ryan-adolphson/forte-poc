@@ -56,7 +56,9 @@ Delegate work to the agent that owns the area.
 - `apps/api/src/documents`: data sheet access (`DocumentsService`), the ingestion script, `GET /api/documents` (the current revision of every data sheet of a visible product) and `GET /api/documents/:documentNumber/file`, which serves the current PDF. Links to a PDF are built by `documentUrl()` in `document-url.ts`.
 - `sample-documents`: example product data sheet PDFs, loaded into `documents` by `db:ingest-docs`. `manifest.json` lists each file's SKU, revision, issue date and whether it is the current revision; two products have three revisions (A, B, C) whose older values differ from the catalogue on purpose.
 
-Not built yet: sign-in, saved conversations, and reading or comparing past revisions of a document. The chat endpoint is unauthenticated and rate limited per client IP.
+- Sign-in: one shared account (`AUTH_USERNAME`, `AUTH_PASSWORD` in `apps/api/.env`). `apps/api/src/auth` checks it, issues a signed HttpOnly `forte_session` cookie and has a global `SessionGuard`: every route is closed unless marked `@Public()`. In the web app, `Auth` (`src/app/auth.ts`) holds the session, the `signedIn` guard protects the routes, and `authInterceptor` sends the user to `/login` when the API answers 401.
+
+Not built yet: per-user accounts, saved conversations, and reading or comparing past revisions of a document. The chat endpoint needs a session and is rate limited per client IP.
 
 ## Commands
 
@@ -74,6 +76,9 @@ Run from the repo root unless noted.
 - Prisma is version 8 (release candidate), not classic Prisma. There is no `schema.prisma`, `PrismaClient`, `prisma generate` or `migrate dev`. Use the `prisma-8` skill in `apps/api/.claude/skills/`.
 - Run `npm install` from the repo root with `-w api` or `-w web`, never inside an app folder.
 - The global `ng` CLI is older than the workspace. Use `npx ng` from `apps/web`.
+- Never put the sign-in username or password in code, tests, placeholders or committed files; they live only in the git-ignored `apps/api/.env`. API e2e tests need them set there and sign in with `signIn(app)` from `test/sign-in.ts`; web specs that render the routes or the shell add `provideSignedIn()` from `src/testing/auth.ts`.
+- New API routes are closed by default. Add `@Public()` only on purpose.
+- Without `SESSION_SECRET`, sessions end when the API restarts. Cookies are not scoped by port, so the dev stack (:4200) and the Docker stack (:8088) overwrite each other's session.
 - `ProductProperty` in `packages/chat-contract` must stay a `type`, not an `interface`, or it stops being assignable to the JSON column type and the API build fails in `seed.ts`.
 - The chat route is rate limited in e2e tests too (10 per minute per app instance). Keep each `describe` in `apps/api/test/chat.e2e-spec.ts` to 10 requests or fewer.
 - The web app's initial bundle is about 497 kB against a 600 kB warning budget in `apps/web/angular.json`, because each page is a lazy route. Load new dialogs and other secondary UI lazily, as `product-details.ts` is.

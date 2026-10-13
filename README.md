@@ -13,7 +13,7 @@ This is a proof of concept.
 | `packages/chat-contract` | Request and event types shared by both apps (declarations only) |
 | `compose.yaml` | PostgreSQL for development, and the whole stack with `docker compose up` |
 
-Not built yet: sign-in, saved conversations and document search.
+Not built yet: per-user accounts and saved conversations.
 
 ## Prerequisites
 
@@ -26,12 +26,21 @@ Run everything from the repository root.
 
 ```bash
 npm install                               # one install for all workspaces
-cp apps/api/.env.example apps/api/.env    # then set GEMINI_API_KEY (see below)
+cp apps/api/.env.example apps/api/.env    # then set AUTH_PASSWORD and GEMINI_API_KEY (see below)
 npm run db:up                             # PostgreSQL 17 on 127.0.0.1:5434, waits until healthy
 npm run db:deploy -w api                  # apply migrations (safe to re-run)
 npm run db:seed -w api                    # sample products (idempotent; development only)
 npm run db:ingest-docs -w api             # sample data sheets (23 PDFs, 19 current; idempotent)
 ```
+
+### Sign-in
+
+The app has one shared account. Set `AUTH_USERNAME` and `AUTH_PASSWORD` in `apps/api/.env`; the
+file is git-ignored, so the password is never committed. Until both are set nobody can sign in and
+every data and chat route answers 401. Sign-in is limited to 10 attempts a minute.
+
+Set `SESSION_SECRET` to any long random string to keep people signed in across API restarts;
+without it every restart signs everyone out. Set `COOKIE_SECURE=true` only behind HTTPS.
 
 ### Gemini API key
 
@@ -50,7 +59,8 @@ npm run api:dev    # API with reload on http://localhost:3000/api
 npm run web:dev    # web app on http://localhost:4200, proxies /api to the API
 ```
 
-Open <http://localhost:4200>. The web app has three pages, reached from the side navigation:
+Open <http://localhost:4200> and sign in with `AUTH_USERNAME` / `AUTH_PASSWORD` from
+`apps/api/.env`. The web app has three pages, reached from the side navigation:
 Products (`/products`, the default), Documents (`/documents`, the current revision of every data
 sheet with a link to its PDF) and Forte AI (`/forte-ai`, the assistant for general questions).
 "Ask Forte" on a product opens a side panel about that product.
@@ -102,15 +112,21 @@ its compressive strength?" works. An unknown SKU is ignored.
 `GET /api/products` returns `{ "products": [...] }`: every product the assistant can see, each with
 `sku`, `name`, `category`, `description` and `properties`. The catalogue page is built from it.
 
+Every route except `/api/health` needs a session. Sign in first and send the cookie:
+
 ```bash
-curl -N -X POST localhost:3000/api/chat/stream \
+curl -c jar -X POST localhost:3000/api/auth/login \
+  -H 'content-type: application/json' \
+  -d '{"username":"<AUTH_USERNAME>","password":"<AUTH_PASSWORD>"}'
+
+curl -N -b jar -X POST localhost:3000/api/chat/stream \
   -H 'content-type: application/json' \
   -d '{"message":"What is the compressive strength of your C32/40 concrete?"}'
 ```
 
-The endpoint has no sign-in. It is limited to 10 messages per minute per client IP
+Without a session the answer is HTTP 401. Chat is limited to 10 messages per minute per client IP
 (`CHAT_RATE_LIMIT`, `CHAT_RATE_TTL_SECONDS`); beyond that it returns HTTP 429 with `Retry-After`.
-Run it locally only.
+The stack runs over plain HTTP, so run it locally only.
 
 ## Tests
 

@@ -7,6 +7,7 @@ import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import { extractPdfText } from '../src/documents/pdf-text.js';
+import { signIn } from './sign-in.js';
 
 /**
  * Read-only, against the dev database after `npm run db:ingest-docs -w api`.
@@ -33,6 +34,7 @@ describe('GET /api/documents/:documentNumber/file', () => {
   const get = (documentNumber: string) =>
     request(app.getHttpServer())
       .get(`/api/documents/${documentNumber}/file`)
+      .set('Cookie', signIn(app))
       .buffer(true)
       .parse((res, done) => {
         const chunks: Buffer[] = [];

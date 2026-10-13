@@ -7,6 +7,7 @@ import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import { hiddenSkus, seedProducts } from '../src/prisma/seed-data.js';
 import { ProductsService } from '../src/products/products.service.js';
+import { signIn } from './sign-in.js';
 
 // Read-only, against the seeded dev database (`npm run db:deploy -w api && npm run db:seed -w api`).
 describe('ProductsService', () => {
@@ -181,7 +182,7 @@ describe('ProductsService', () => {
 
   describe('GET /api/products', () => {
     it('returns every visible product in full, no hidden one, ordered by category then name', async () => {
-      const response = await request(app.getHttpServer()).get('/api/products').expect(200);
+      const response = await request(app.getHttpServer()).get('/api/products').set('Cookie', signIn(app)).expect(200);
       const body = response.body as ProductListResponse;
 
       expect(Object.keys(body)).toEqual(['products']);
@@ -202,7 +203,7 @@ describe('ProductsService', () => {
     });
 
     it('ignores query parameters', async () => {
-      const response = await request(app.getHttpServer()).get('/api/products?sku=FRT-CON-H2835&all=true').expect(200);
+      const response = await request(app.getHttpServer()).get('/api/products?sku=FRT-CON-H2835&all=true').set('Cookie', signIn(app)).expect(200);
       expect((response.body as ProductListResponse).products).toHaveLength(19);
     });
   });

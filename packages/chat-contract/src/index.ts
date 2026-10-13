@@ -146,3 +146,28 @@ export interface ChatErrorBody {
   code: ChatErrorCode;
   message: string;
 }
+
+/** Body of POST /api/auth/login. */
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+/**
+ * Body of a successful POST /api/auth/login and of GET /api/auth/session: who is signed in.
+ * The session itself is an HttpOnly cookie that the browser sends with every request.
+ */
+export interface SessionResponse {
+  username: string;
+}
+
+export type AuthErrorCode = 'invalid_credentials' | 'auth_not_configured' | 'unauthenticated';
+
+/**
+ * JSON body of a sign-in error: 401 `invalid_credentials` and 503 `auth_not_configured` from
+ * POST /api/auth/login, 401 `unauthenticated` from every route that needs a session.
+ */
+export interface AuthErrorBody {
+  code: AuthErrorCode;
+  message: string;
+}

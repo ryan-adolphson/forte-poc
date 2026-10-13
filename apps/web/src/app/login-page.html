@@ -1,0 +1,45 @@
+<mat-card appearance="outlined">
+  <img ngSrc="forte-mark.png" width="48" height="48" alt="Forte" priority />
+  <h1>Sign in</h1>
+
+  <form novalidate (submit)="signIn($event)">
+    <mat-form-field>
+      <mat-label>Username</mat-label>
+      <input
+        #username
+        matInput
+        autocomplete="username"
+        autocapitalize="none"
+        spellcheck="false"
+        [formField]="form.username"
+      />
+      <mat-error>Enter the username.</mat-error>
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Password</mat-label>
+      <input
+        #password
+        matInput
+        type="password"
+        autocomplete="current-password"
+        [formField]="form.password"
+      />
+      <mat-error>Enter the password.</mat-error>
+    </mat-form-field>
+
+    <!-- Always in the page, so a screen reader announces a message when it appears. -->
+    <div role="alert">
+      @if (error(); as message) {
+      <p class="error">{{ message }}</p>
+      }
+    </div>
+
+    <button matButton="filled" type="submit" [disabled]="form().submitting()">
+      @if (form().submitting()) {
+      <mat-spinner diameter="18" aria-hidden="true" />
+      }
+      Sign in
+    </button>
+  </form>
+</mat-card>

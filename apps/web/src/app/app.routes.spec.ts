@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { provideSignedIn } from '../testing/auth';
 import { routes } from './app.routes';
 import { DocumentsPage } from './documents-page';
 import { ForteAiPage } from './forte-ai-page';
@@ -14,7 +15,12 @@ describe('routes', () => {
 
   beforeEach(async () => {
     TestBed.configureTestingModule({
-      providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter(routes),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideSignedIn(),
+      ],
     });
     harness = await RouterTestingHarness.create();
   });

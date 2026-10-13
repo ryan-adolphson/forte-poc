@@ -1,4 +1,4 @@
-import { Service, computed, signal } from '@angular/core';
+import { Service, computed, inject, signal } from '@angular/core';
 import type {
   ChatErrorBody,
   ChatEvent,
@@ -6,6 +6,7 @@ import type {
   ChatSource,
   Product,
 } from '@forte/chat-contract';
+import { Auth } from './auth';
 import { SseMessage, SseParser } from './sse-parser';
 
 export interface ChatMessage {
@@ -37,9 +38,11 @@ const TOOL_LABELS: Record<string, string> = {
 };
 
 const CONNECTION_LOST = 'Connection lost. The answer may be incomplete.';
+const SIGNED_OUT = 'You were signed out. Sign in and try again.';
 
 @Service()
 export class Chat {
+  private readonly auth = inject(Auth);
   private readonly messagesState = signal<ChatMessage[]>([]);
   private readonly statusState = signal<ChatStatus>('idle');
   private readonly activityState = signal<string | null>(null);
@@ -132,6 +135,12 @@ export class Chat {
         body: JSON.stringify(body),
         signal: controller.signal,
       });
+      if (response.status === 401) {
+        // The session is gone. The question stays, to be asked again after signing in.
+        this.patch(id, { error: SIGNED_OUT, retryable: true });
+        this.auth.sessionLost();
+        return;
+      }
       if (!response.ok || !response.body) {
         this.patch(id, await describeHttpError(response));
         return;

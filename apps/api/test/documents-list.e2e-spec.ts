@@ -6,6 +6,7 @@ import type { DocumentListResponse, ProductListResponse } from '@forte/chat-cont
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import { hiddenSkus } from '../src/prisma/seed-data.js';
+import { signIn } from './sign-in.js';
 
 /**
  * Read-only, against the dev database after `npm run db:ingest-docs -w api`.
@@ -27,7 +28,7 @@ describe('GET /api/documents', () => {
     configureApp(app);
     await app.init();
 
-    const response = await request(app.getHttpServer()).get('/api/documents').expect(200);
+    const response = await request(app.getHttpServer()).get('/api/documents').set('Cookie', signIn(app)).expect(200);
     headers = response.headers;
     expect(Object.keys(response.body as object)).toEqual(['documents']);
     documents = (response.body as DocumentListResponse).documents.filter(
@@ -107,7 +108,7 @@ describe('GET /api/documents', () => {
     }
 
     const linked = documents.find((document) => document.documentNumber === 'DS-FRT-INS-PIR080')!;
-    const file = await request(app.getHttpServer()).get(linked.url).expect(200);
+    const file = await request(app.getHttpServer()).get(linked.url).set('Cookie', signIn(app)).expect(200);
     expect(file.headers['content-type']).toBe('application/pdf');
   });
 
@@ -119,7 +120,7 @@ describe('GET /api/documents', () => {
 
     // The product list is ordered the same way by the same database, so there is no
     // need to imitate its collation here. Every visible product has one data sheet.
-    const response = await request(app.getHttpServer()).get('/api/products').expect(200);
+    const response = await request(app.getHttpServer()).get('/api/products').set('Cookie', signIn(app)).expect(200);
     const products = (response.body as ProductListResponse).products.filter(
       (product) => product.sku !== SWAPPED_SKU,
     );

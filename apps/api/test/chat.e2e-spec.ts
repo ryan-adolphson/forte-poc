@@ -8,6 +8,7 @@ import { appConfig, validateEnv } from '../src/config/app.config.js';
 import { configureApp } from '../src/configure-app.js';
 import { hiddenSkus } from '../src/prisma/seed-data.js';
 import { fakeGemini, functionCallTurn, textTurn } from './fake-gemini.js';
+import { signIn } from './sign-in.js';
 
 // The Gemini seam is replaced by a fake, so no test here calls the real model.
 async function createApp(gemini: ReturnType<typeof fakeGemini>, chatRateLimit?: number) {
@@ -56,6 +57,7 @@ describe('POST /api/chat/stream', () => {
   it('streams the contract events in order, with the tool reading the seeded database', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/chat/stream')
+      .set('Cookie', signIn(app))
       .send({ message: '  What is the cube strength of C32/40?  ' })
       .expect(200)
       .expect('Content-Type', /^text\/event-stream/)
@@ -117,7 +119,7 @@ describe('POST /api/chat/stream', () => {
   ])('rejects %s with 400 and does not call the model', async (_case, body) => {
     const callsBefore = gemini.requests.length;
 
-    const response = await request(app.getHttpServer()).post('/api/chat/stream').send(body).expect(400);
+    const response = await request(app.getHttpServer()).post('/api/chat/stream').set('Cookie', signIn(app)).send(body).expect(400);
 
     expect(response.headers['content-type']).toMatch(/application\/json/);
     expect(gemini.requests).toHaveLength(callsBefore);
@@ -140,7 +142,7 @@ describe('POST /api/chat/stream with productSku', () => {
     await app.close();
   });
 
-  const send = (body: object) => request(app.getHttpServer()).post('/api/chat/stream').send(body).expect(200);
+  const send = (body: object) => request(app.getHttpServer()).post('/api/chat/stream').set('Cookie', signIn(app)).send(body).expect(200);
 
   it('gives the model the viewed product, named from the database row', async () => {
     const response = await send({ message: 'What is its compressive strength?', productSku: ' frt-con-c3240 ' });
@@ -177,7 +179,7 @@ describe('POST /api/chat/stream with data sheets', () => {
 
   const ask = async (gemini: ReturnType<typeof fakeGemini>, message: string) => {
     app = await createApp(gemini);
-    const response = await request(app.getHttpServer()).post('/api/chat/stream').send({ message }).expect(200);
+    const response = await request(app.getHttpServer()).post('/api/chat/stream').set('Cookie', signIn(app)).send({ message }).expect(200);
     return parseEvents(response.text);
   };
 
@@ -226,6 +228,7 @@ describe('POST /api/chat/stream with data sheets', () => {
     // The cited link serves a PDF.
     await request(app.getHttpServer())
       .get('/api/documents/DS-FRT-CON-C3240/file')
+      .set('Cookie', signIn(app))
       .expect(200)
       .expect('Content-Type', 'application/pdf');
   });
@@ -263,7 +266,7 @@ describe('POST /api/chat/stream rate limit', () => {
   });
 
   it('answers the third request in the window with 429, Retry-After and ChatErrorBody', async () => {
-    const send = () => request(app.getHttpServer()).post('/api/chat/stream').send({ message: 'hi' });
+    const send = () => request(app.getHttpServer()).post('/api/chat/stream').set('Cookie', signIn(app)).send({ message: 'hi' });
 
     await send().expect(200);
     await send().expect(200);
