@@ -9,7 +9,7 @@ This is a proof of concept.
 | Path | What |
 | --- | --- |
 | `apps/api` | NestJS 12 API: the product catalogue, the chat stream, Gemini tool calling |
-| `apps/web` | Angular 22 single-page chat app |
+| `apps/web` | Angular 22 product catalogue with an "Ask Forte" chat side panel |
 | `packages/chat-contract` | Request and event types shared by both apps (declarations only) |
 | `compose.yaml` | PostgreSQL for development, and the whole stack with `docker compose up` |
 
@@ -89,6 +89,12 @@ Things to know:
 with server-sent events: `start`, `tool`, `text`, then `done` or `error`. Send the `interactionId`
 from `done` back as `previousInteractionId` to continue the conversation. The types are in
 [packages/chat-contract/src/index.ts](packages/chat-contract/src/index.ts).
+
+An optional `"productSku"` tells the assistant which product the user is looking at, so "what is
+its compressive strength?" works. An unknown SKU is ignored.
+
+`GET /api/products` returns `{ "products": [...] }`: every product the assistant can see, each with
+`sku`, `name`, `category`, `description` and `properties`. The catalogue page is built from it.
 
 ```bash
 curl -N -X POST localhost:3000/api/chat/stream \

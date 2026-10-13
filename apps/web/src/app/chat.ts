@@ -1,5 +1,5 @@
 import { Service, computed, signal } from '@angular/core';
-import type { ChatErrorBody, ChatEvent, ChatRequest } from '@forte/chat-contract';
+import type { ChatErrorBody, ChatEvent, ChatRequest, Product } from '@forte/chat-contract';
 import { SseMessage, SseParser } from './sse-parser';
 
 export interface ChatMessage {
@@ -31,6 +31,7 @@ export class Chat {
   private readonly statusState = signal<ChatStatus>('idle');
   private readonly activityState = signal<string | null>(null);
   private readonly interactionIdState = signal<string | null>(null);
+  private readonly productState = signal<Product | null>(null);
 
   readonly messages = this.messagesState.asReadonly();
   readonly status = this.statusState.asReadonly();
@@ -39,10 +40,24 @@ export class Chat {
   /** `interactionId` of the last completed turn; sent back to keep the conversation's context. */
   readonly interactionId = this.interactionIdState.asReadonly();
   readonly busy = computed(() => this.statusState() !== 'idle');
+  /** The product the user is asking about, or null for a general chat. */
+  readonly product = this.productState.asReadonly();
 
   private controller: AbortController | null = null;
   private lastQuestion = '';
   private nextId = 1;
+
+  /**
+   * Sets the product the chat is about. The server keeps the conversation history, so "it" in an
+   * old conversation would still mean the earlier product: a different product (or none) starts
+   * a new conversation. Selecting the same product again keeps the conversation.
+   */
+  selectProduct(product: Product | null): void {
+    if (product?.sku !== this.productState()?.sku) {
+      this.newChat();
+    }
+    this.productState.set(product);
+  }
 
   async send(text: string): Promise<void> {
     const message = text.trim();
@@ -93,6 +108,10 @@ export class Chat {
       const previousInteractionId = this.interactionIdState();
       if (previousInteractionId) {
         body.previousInteractionId = previousInteractionId;
+      }
+      const productSku = this.productState()?.sku;
+      if (productSku) {
+        body.productSku = productSku;
       }
       const response = await fetch('/api/chat/stream', {
         method: 'POST',

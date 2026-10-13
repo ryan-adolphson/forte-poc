@@ -1,0 +1,51 @@
+@if (products.isLoading()) {
+<p class="state" role="status">
+  <mat-spinner diameter="20" aria-hidden="true" />
+  Loading products…
+</p>
+} @else if (products.error()) {
+<div class="state" role="alert">
+  <p>The products could not be loaded.</p>
+  <button matButton="outlined" type="button" (click)="products.reload()">Retry</button>
+</div>
+} @else { @for (category of categories(); track category.slug) {
+<section [attr.aria-labelledby]="'category-' + category.slug">
+  <h2 [id]="'category-' + category.slug">{{ category.label }}</h2>
+  <ul class="grid">
+    @for (product of category.products; track product.sku) {
+    <li>
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <h3 mat-card-title>{{ product.name }}</h3>
+          <mat-card-subtitle>{{ product.sku }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="description">{{ product.description }}</p>
+          <dl>
+            @for (property of product.properties | slice: 0 : 3; track property.name) {
+            <div>
+              <dt>{{ property.name }}:</dt>
+              &ngsp;
+              <dd>{{ property.value }} {{ property.unit }}</dd>
+            </div>
+            }
+          </dl>
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <button
+            matButton="tonal"
+            type="button"
+            [attr.aria-label]="'Ask Forte about ' + product.name"
+            (click)="ask.emit(product)"
+          >
+            Ask Forte
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </li>
+    }
+  </ul>
+</section>
+} @empty {
+<p class="state">There are no products to show yet.</p>
+} }

@@ -11,7 +11,7 @@ function escapeLike(text: string): string {
 }
 
 /**
- * The only data access the assistant has.
+ * The only data access the assistant and the product page have.
  *
  * Every query starts from `visible()`, which filters `visibleToBot = true` in SQL and
  * returns only the columns of `Product`. A hidden product and a non-existent one are
@@ -67,6 +67,15 @@ export class ProductsService {
       .select('sku', 'name', 'category')
       .orderBy([(p) => p.category.asc(), (p) => p.name.asc()])
       .all();
+  }
+
+  /** Every visible product in full, by category then name. Not capped. For the product page. */
+  async listAllWithDetails(): Promise<Product[]> {
+    const rows = await this.visible()
+      .select('sku', 'name', 'category', 'description', 'properties')
+      .orderBy([(p) => p.category.asc(), (p) => p.name.asc()])
+      .all();
+    return rows.map(toProduct);
   }
 
   /** Distinct categories that have at least one visible product, sorted. */

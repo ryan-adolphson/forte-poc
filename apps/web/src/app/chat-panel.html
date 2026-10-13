@@ -1,0 +1,84 @@
+<header class="head">
+  <h2>Ask Forte</h2>
+  <span class="spacer"></span>
+  <button matButton type="button" [disabled]="chat.messages().length === 0" (click)="newChat()">
+    New chat
+  </button>
+  <button matButton type="button" (click)="closed.emit()">Close</button>
+</header>
+
+@if (chat.product(); as product) {
+<app-product-card class="product" [product]="product" />
+}
+
+<section #scroller class="messages" tabindex="0" aria-label="Conversation" (scroll)="onScroll()">
+  @if (chat.messages().length === 0) {
+  <div class="empty">
+    @if (chat.product(); as product) {
+    <p>Ask about {{ product.name }}.</p>
+    } @else {
+    <p>Ask about our construction materials and their properties.</p>
+    }
+    <ul class="examples" aria-label="Example questions">
+      @for (example of examples(); track $index) {
+      <li>
+        <button matButton="outlined" type="button" (click)="ask(example)">{{ example }}</button>
+      </li>
+      }
+    </ul>
+  </div>
+  } @for (message of chat.messages(); track message.id) {
+  <article class="message" [class.user]="message.role === 'user'">
+    <h3 class="who">{{ message.role === 'user' ? 'You' : 'Assistant' }}</h3>
+    @if (message.text) {
+    <p class="text">{{ message.text }}</p>
+    } @if ($last && statusLine(); as line) {
+    <p class="note status">
+      <mat-spinner diameter="16" aria-hidden="true" />
+      {{ line }}
+    </p>
+    } @if (message.stopped) {
+    <p class="note">Stopped.</p>
+    } @if (message.error) {
+    <p class="error">{{ message.error }}</p>
+    @if (message.retryable && $last && !chat.busy()) {
+    <button matButton="outlined" type="button" (click)="retry()">Try again</button>
+    } }
+  </article>
+  }
+</section>
+
+<div class="visually-hidden" aria-live="polite">{{ announcement() }}</div>
+
+<footer class="composer">
+  <form (submit)="submit($event)">
+    <div class="row">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Message</mat-label>
+        <textarea
+          #input
+          matInput
+          id="message"
+          cdkTextareaAutosize
+          cdkAutosizeMinRows="1"
+          cdkAutosizeMaxRows="6"
+          aria-describedby="ai-note"
+          [formField]="chatForm.message"
+          (keydown.enter)="onEnter($event)"
+        ></textarea>
+        @if (showCount()) {
+        <mat-hint align="end" class="count" [class.over]="length() > maxLength"
+          >{{ length() }} / {{ maxLength }}</mat-hint
+        >
+        }
+      </mat-form-field>
+      @if (chat.busy()) {
+      <button matButton="outlined" type="button" (click)="stop()">Stop</button>
+      }
+      <button matButton="filled" type="submit" [disabled]="!canSend()">Send</button>
+    </div>
+    <p id="ai-note" class="note">
+      Answers are written by an AI assistant from the product catalogue.
+    </p>
+  </form>
+</footer>

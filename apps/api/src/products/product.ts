@@ -1,23 +1,13 @@
-/** One measured or declared property of a product, as stored in `products.properties`. */
-export type ProductProperty = {
-  name: string;
-  value: number | string;
-  unit?: string;
-  /** The test or product standard the value refers to, where one exists. */
-  standard?: string;
-};
-
 /**
- * A product as the assistant sees it. Deliberately has no `id`, no timestamps and
- * no `visibleToBot`: the model must not be able to tell that hidden rows exist.
+ * The product types are defined once, in the contract shared with the web app.
+ *
+ * `Product` is a product as the assistant and the product page see it. Deliberately has
+ * no `id`, no timestamps and no `visibleToBot`: neither may be able to tell that hidden
+ * rows exist. `ProductProperty` is one entry of `products.properties`.
  */
-export type Product = {
-  sku: string;
-  name: string;
-  category: string;
-  description: string;
-  properties: ProductProperty[];
-};
+import type { Product } from '@forte/chat-contract';
+
+export type { Product, ProductProperty } from '@forte/chat-contract';
 
 /** The compact form used to list the whole catalogue. */
 export type ProductSummary = Pick<Product, 'sku' | 'name' | 'category'>;

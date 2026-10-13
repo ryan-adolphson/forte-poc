@@ -4,6 +4,7 @@ import type { ChatErrorCode, ChatEvent, ChatRequest, ChatUsage } from '@forte/ch
 import { appConfig, type AppConfig } from '../config/app.config.js';
 import { ProductsService } from '../products/products.service.js';
 import { buildGeminiRequest, GEMINI_STREAM, type GeminiStream } from './gemini.js';
+import { withProductContext } from './system-prompt.js';
 import { chatTools } from './tools/index.js';
 import type { ToolResult } from './tools/tool.js';
 
@@ -42,6 +43,7 @@ export class ChatService {
     let usageReported = false;
     let rounds = 0;
     let outcome = 'model_error';
+    let productContext = false;
 
     // `detail` goes to the log line only; the user sees the fixed message.
     const fail = (
@@ -61,6 +63,15 @@ export class ChatService {
       }
 
       let input: string | Interactions.FunctionResultStep[] = request.message;
+      if (request.productSku) {
+        // getBySku returns null for hidden and unknown SKUs alike; both then run exactly
+        // like a turn with no productSku. Only the database's sku and name are used.
+        const viewed = await this.products.getBySku(request.productSku);
+        if (viewed !== null) {
+          input = withProductContext(viewed, request.message);
+          productContext = true;
+        }
+      }
       let previousInteractionId = request.previousInteractionId;
       let answered = false;
 
@@ -175,10 +186,11 @@ export class ChatService {
       // Only the error's class name is logged: its message can carry request details.
       yield fail('model_error', error instanceof Error ? error.name : 'unknown');
     } finally {
-      // One line per turn. No message text, no tool arguments or results, no key.
+      // One line per turn. No message text, no tool arguments or results, no key, and
+      // no SKU: product_context only says whether a viewed product was found.
       this.logger.log(
         `turn model=${this.config.geminiModel} outcome=${outcome} rounds=${rounds} ` +
-          `tools=[${toolNames.join(',')}] input_tokens=${usage.inputTokens} ` +
+          `tools=[${toolNames.join(',')}] product_context=${productContext} input_tokens=${usage.inputTokens} ` +
           `output_tokens=${usage.outputTokens} total_tokens=${usage.totalTokens} ` +
           `duration_ms=${Date.now() - startedAt}`,
       );

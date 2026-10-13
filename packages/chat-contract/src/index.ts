@@ -4,6 +4,37 @@ export interface ChatRequest {
   message: string;
   /** `interactionId` from the previous turn's `done` event, to continue that conversation. */
   previousInteractionId?: string;
+  /**
+   * SKU of the product the user is looking at while asking, so "its strength" means that
+   * product. An unknown SKU is ignored: the message is answered as if none was sent.
+   */
+  productSku?: string;
+}
+
+/**
+ * One measured or declared property of a product. A `type`, not an `interface`, on
+ * purpose: the API stores these in a JSON column, and only a type alias is assignable to
+ * a JSON value type.
+ */
+export type ProductProperty = {
+  name: string;
+  value: number | string;
+  unit?: string;
+  /** The test or product standard the value refers to, where one exists. */
+  standard?: string;
+};
+
+export interface Product {
+  sku: string;
+  name: string;
+  category: string;
+  description: string;
+  properties: ProductProperty[];
+}
+
+/** Body of GET /api/products: every product, ordered by category then name. */
+export interface ProductListResponse {
+  products: Product[];
 }
 
 export interface ChatUsage {

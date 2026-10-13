@@ -5,6 +5,7 @@ import type { ProductsService } from '../products/products.service.js';
 import { ChatService, MAX_TOOL_ROUNDS } from './chat.service.js';
 import type { GeminiStream } from './gemini.js';
 import { SYSTEM_PROMPT } from './system-prompt.js';
+import { chatTools } from './tools/index.js';
 
 const config = { geminiModel: 'gemini-3.8-flash' } as AppConfig;
 
@@ -60,6 +61,80 @@ describe('ChatService.run', () => {
       previous_interaction_id: 'v1_prev',
       store: true,
       stream: true,
+    });
+  });
+
+  describe('productSku', () => {
+    const CONTEXT = '[Context from the product page: the user is viewing "Ready-Mix Concrete C32/40" (SKU FRT-CON-C3240).]';
+
+    async function firstRequest(productSku: string | undefined, found: boolean) {
+      const gemini = fakeGemini(textTurn('v1_a', ['ok']));
+      const { service, products } = setup(gemini.stream);
+      if (!found) products.getBySku.mockResolvedValue(null);
+      const events: ChatEvent[] = [];
+      const request = { message: 'What is its compressive strength?', productSku };
+      for await (const event of service.run(request, new AbortController().signal)) events.push(event);
+      return { events, request: gemini.requests[0]!, requests: gemini.requests, products };
+    }
+
+    it('prepends the context with the name and SKU from the database, not the client string', async () => {
+      // The client sends a different spelling; the row's own SKU and name are what go out.
+      const { request, requests, products, events } = await firstRequest('frt-con-c3240', true);
+
+      expect(products.getBySku).toHaveBeenCalledWith('frt-con-c3240');
+      expect(request.input).toBe(`${CONTEXT}\n\nWhat is its compressive strength?`);
+      expect(request.input).not.toContain('frt-con-c3240');
+      expect(request.system_instruction).toBe(SYSTEM_PROMPT);
+      expect(request.tools).toEqual(chatTools.map((tool) => tool.declaration));
+      expect(requests).toHaveLength(1);
+      expect(events.at(-1)?.event).toBe('done');
+    });
+
+    it('puts only the SKU and name in the context, never properties or the description', async () => {
+      const { request } = await firstRequest('FRT-CON-C3240', true);
+
+      expect(request.input).not.toContain(product.description);
+      expect(request.input).not.toContain(product.category);
+    });
+
+    it.each([
+      ['an unknown SKU', 'FRT-NOPE-0000'],
+      ['a hidden SKU', 'FRT-CON-H2835'],
+    ])('runs the turn exactly as without productSku for %s', async (_case, productSku) => {
+      const without = await firstRequest(undefined, false);
+      const withSku = await firstRequest(productSku, false);
+
+      expect(withSku.products.getBySku).toHaveBeenCalledWith(productSku);
+      expect(withSku.request).toEqual(without.request);
+      expect(withSku.events).toEqual(without.events);
+      expect(withSku.request.input).toBe('What is its compressive strength?');
+      expect(JSON.stringify(withSku.requests)).not.toContain(productSku);
+      expect(withSku.request.system_instruction).toBe(SYSTEM_PROMPT);
+      expect(withSku.request.tools).toHaveLength(4);
+    });
+
+    it('does not look anything up when no productSku is sent', async () => {
+      const { products, request } = await firstRequest(undefined, true);
+
+      expect(products.getBySku).not.toHaveBeenCalled();
+      expect(request.input).toBe('What is its compressive strength?');
+    });
+
+    it('sends the context only on the first model call of the turn', async () => {
+      const gemini = fakeGemini(
+        functionCallTurn('v1_a', [{ id: 'call_1', name: 'get_product', argumentsJson: '{"sku":"FRT-CON-C3240"}' }]),
+        textTurn('v1_b', ['40 MPa']),
+      );
+      const { service } = setup(gemini.stream);
+      const request = { message: 'What is its compressive strength?', productSku: 'FRT-CON-C3240' };
+      for await (const _event of service.run(request, new AbortController().signal)) {
+        // drain
+      }
+
+      expect(gemini.requests[0]!.input).toContain(CONTEXT);
+      expect(JSON.stringify(gemini.requests[1]!.input)).not.toContain('Context from the product page');
+      expect(gemini.requests[1]!.system_instruction).toBe(SYSTEM_PROMPT);
+      expect(gemini.requests[1]!.tools).toHaveLength(4);
     });
   });
 

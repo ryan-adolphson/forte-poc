@@ -1,5 +1,8 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import request from 'supertest';
+import type { App } from 'supertest/types.js';
+import type { ProductListResponse } from '@forte/chat-contract';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import { hiddenSkus, seedProducts } from '../src/prisma/seed-data.js';
@@ -7,7 +10,7 @@ import { ProductsService } from '../src/products/products.service.js';
 
 // Read-only, against the seeded dev database (`npm run db:deploy -w api && npm run db:seed -w api`).
 describe('ProductsService', () => {
-  let app: INestApplication;
+  let app: INestApplication<App>;
   let products: ProductsService;
 
   const hidden = seedProducts.filter((product) => hiddenSkus.includes(product.sku));
@@ -173,6 +176,34 @@ describe('ProductsService', () => {
       expect(results.map((product) => product.category)).toEqual(
         results.map((product) => product.category).sort(),
       );
+    });
+  });
+
+  describe('GET /api/products', () => {
+    it('returns every visible product in full, no hidden one, ordered by category then name', async () => {
+      const response = await request(app.getHttpServer()).get('/api/products').expect(200);
+      const body = response.body as ProductListResponse;
+
+      expect(Object.keys(body)).toEqual(['products']);
+      expect(body.products).toHaveLength(19);
+      for (const product of body.products) {
+        expect(Object.keys(product).sort()).toEqual(['category', 'description', 'name', 'properties', 'sku']);
+        expect(hiddenSkus).not.toContain(product.sku);
+      }
+      for (const sku of hiddenSkus) expect(response.text).not.toContain(sku);
+      expect(response.text).not.toMatch(/Heritage|Kestrel|visibleToBot|visible_to_bot/);
+
+      // Same order and content as the assistant's own view (19 is under search's cap of 25).
+      expect(body.products).toEqual(await products.search());
+      const keys = body.products.map((product) => [product.category, product.name]);
+      expect(keys).toEqual(
+        [...keys].sort(([c1, n1], [c2, n2]) => (c1 === c2 ? (n1! < n2! ? -1 : 1) : c1! < c2! ? -1 : 1)),
+      );
+    });
+
+    it('ignores query parameters', async () => {
+      const response = await request(app.getHttpServer()).get('/api/products?sku=FRT-CON-H2835&all=true').expect(200);
+      expect((response.body as ProductListResponse).products).toHaveLength(19);
     });
   });
 

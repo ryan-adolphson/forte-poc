@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { FakeStream, fakeFetch, settle } from '../testing/fake-chat-stream';
+import { PRODUCTS } from '../testing/products';
 import { Chat } from './chat';
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
@@ -260,5 +261,90 @@ describe('Chat', () => {
     expect(third.body).toEqual({ message: 'three' });
     expect(chat.status()).toBe('streaming');
     expect(chat.messages()).toHaveLength(2);
+  });
+
+  it('sends productSku with every message while a product is selected, and not otherwise', async () => {
+    const streams = fakeFetch();
+    const general = await open(streams, 'one');
+    expect(general.body).toEqual({ message: 'one' });
+    await general.emit('done', { interactionId: 'int-1', usage: null });
+    await general.close();
+
+    chat.selectProduct(PRODUCTS[0]);
+    expect(chat.product()).toBe(PRODUCTS[0]);
+    const first = await open(streams, 'What is its strength?');
+    expect(first.body).toEqual({
+      message: 'What is its strength?',
+      productSku: 'CON-C3240',
+    });
+    await first.emit('done', { interactionId: 'int-2', usage: null });
+    await first.close();
+
+    const second = await open(streams, 'And its density?');
+    expect(second.body).toEqual({
+      message: 'And its density?',
+      previousInteractionId: 'int-2',
+      productSku: 'CON-C3240',
+    });
+  });
+
+  it('starts a new conversation when another product, or none, is selected', async () => {
+    const streams = fakeFetch();
+    chat.selectProduct(PRODUCTS[0]);
+    const first = await open(streams, 'one');
+    await first.emit('done', { interactionId: 'int-1', usage: null });
+    await first.close();
+    const second = await open(streams, 'two');
+    await second.emit('text', { delta: 'So far' });
+
+    chat.selectProduct(PRODUCTS[1]);
+    expect(second.signal.aborted).toBe(true);
+    expect(chat.messages()).toEqual([]);
+    expect(chat.interactionId()).toBeNull();
+    expect(chat.status()).toBe('idle');
+    expect(chat.product()).toBe(PRODUCTS[1]);
+
+    const third = await open(streams, 'three');
+    expect(third.body).toEqual({ message: 'three', productSku: 'CON-C2025' });
+    await third.emit('done', { interactionId: 'int-3', usage: null });
+    await third.close();
+
+    chat.selectProduct(null);
+    expect(chat.messages()).toEqual([]);
+    expect(chat.interactionId()).toBeNull();
+    expect(chat.product()).toBeNull();
+
+    const fourth = await open(streams, 'four');
+    expect(fourth.body).toEqual({ message: 'four' });
+    chat.selectProduct(PRODUCTS[0]);
+    expect(fourth.signal.aborted).toBe(true);
+    expect(chat.messages()).toEqual([]);
+  });
+
+  it('keeps the conversation when the same product is selected again', async () => {
+    const streams = fakeFetch();
+    chat.selectProduct(PRODUCTS[0]);
+    const first = await open(streams, 'one');
+    await first.emit('done', { interactionId: 'int-1', usage: null });
+    await first.close();
+    const second = await open(streams, 'two');
+    await second.emit('text', { delta: 'So far' });
+
+    chat.selectProduct({ ...PRODUCTS[0] }); // the same SKU, as after the catalogue reloads
+    expect(second.signal.aborted).toBe(false);
+    expect(chat.messages()).toHaveLength(4);
+    expect(chat.interactionId()).toBe('int-1');
+    expect(chat.status()).toBe('streaming');
+
+    await second.emit('done', { interactionId: 'int-2', usage: null });
+    await second.close();
+    chat.selectProduct(null);
+    chat.selectProduct(null);
+    const general = await open(streams, 'three');
+    await general.emit('done', { interactionId: 'int-3', usage: null });
+    await general.close();
+    chat.selectProduct(null);
+    expect(chat.messages()).toHaveLength(2);
+    expect(chat.interactionId()).toBe('int-3');
   });
 });

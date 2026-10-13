@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module.js';
 import { GEMINI_STREAM } from '../src/chat/gemini.js';
 import { appConfig, validateEnv } from '../src/config/app.config.js';
 import { configureApp } from '../src/configure-app.js';
+import { hiddenSkus } from '../src/prisma/seed-data.js';
 import { fakeGemini, functionCallTurn, textTurn } from './fake-gemini.js';
 
 // The Gemini seam is replaced by a fake, so no test here calls the real model.
@@ -86,6 +87,8 @@ describe('POST /api/chat/stream', () => {
     ['a missing message', {}],
     ['an over-long previousInteractionId', { message: 'hi', previousInteractionId: 'x'.repeat(201) }],
     ['an unknown property', { message: 'hi', model: 'other' }],
+    ['an over-long productSku', { message: 'hi', productSku: 'x'.repeat(65) }],
+    ['an empty productSku', { message: 'hi', productSku: '' }],
   ])('rejects %s with 400 and does not call the model', async (_case, body) => {
     const callsBefore = gemini.requests.length;
 
@@ -93,6 +96,46 @@ describe('POST /api/chat/stream', () => {
 
     expect(response.headers['content-type']).toMatch(/application\/json/);
     expect(gemini.requests).toHaveLength(callsBefore);
+  });
+});
+
+describe('POST /api/chat/stream with productSku', () => {
+  let app: INestApplication<App>;
+  const gemini = fakeGemini(textTurn('v1_a', ['ok']));
+  const DONE = { event: 'done', data: { interactionId: 'v1_a', usage: expect.any(Object) as unknown } };
+
+  beforeAll(async () => {
+    app = await createApp(gemini);
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  const send = (body: object) => request(app.getHttpServer()).post('/api/chat/stream').send(body).expect(200);
+
+  it('gives the model the viewed product, named from the database row', async () => {
+    const response = await send({ message: 'What is its compressive strength?', productSku: ' frt-con-c3240 ' });
+
+    expect(parseEvents(response.text).at(-1)).toEqual(DONE);
+    expect(gemini.requests.at(-1)!.input).toBe(
+      '[Context from the product page: the user is viewing "Ready-Mix Concrete C32/40" (SKU FRT-CON-C3240).]' +
+        '\n\nWhat is its compressive strength?',
+    );
+  });
+
+  it.each([
+    ['a hidden SKU', hiddenSkus[0]!],
+    ['an unknown SKU', 'FRT-NOPE-0000'],
+  ])('answers %s exactly like a message with no productSku', async (_case, productSku) => {
+    const plain = await send({ message: 'What is this product?' });
+    const plainRequest = gemini.requests.at(-1)!;
+    const response = await send({ message: 'What is this product?', productSku });
+
+    expect(response.text).toBe(plain.text);
+    expect(gemini.requests.at(-1)).toEqual(plainRequest);
+    expect(gemini.requests.at(-1)!.input).toBe('What is this product?');
+    expect(JSON.stringify(gemini.requests.at(-1))).not.toMatch(/Heritage|H28/);
   });
 });
 

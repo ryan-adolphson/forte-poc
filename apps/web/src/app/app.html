@@ -1,87 +1,32 @@
-<header>
-  <mat-toolbar>
-    <h1>Forte Search</h1>
-    <span class="spacer"></span>
-    <button matButton type="button" [disabled]="chat.messages().length === 0" (click)="newChat()">
-      New chat
-    </button>
-  </mat-toolbar>
-</header>
+<mat-sidenav-container>
+  <!-- In "over" mode Material traps focus in the panel, closes it on Escape or a click outside,
+       and returns focus to the button that opened it. -->
+  <mat-sidenav
+    mode="over"
+    position="end"
+    autoFocus="textarea"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Ask Forte"
+  >
+    <app-chat-panel (closed)="panel().close()" />
+  </mat-sidenav>
 
-<main #scroller class="messages" tabindex="0" aria-label="Conversation" (scroll)="onScroll()">
-  <div class="column">
-    @if (chat.messages().length === 0) {
-      <section class="empty">
-        <p>Ask about our construction materials and their properties.</p>
-        <ul class="examples" aria-label="Example questions">
-          @for (example of examples; track example) {
-            <li>
-              <button matButton="outlined" type="button" (click)="ask(example)">
-                {{ example }}
-              </button>
-            </li>
-          }
-        </ul>
-      </section>
-    }
+  <mat-sidenav-content>
+    <header>
+      <mat-toolbar>
+        <h1>Forte</h1>
+        <span class="spacer"></span>
+        <button matButton="filled" type="button" (click)="ask(null)">Ask Forte</button>
+      </mat-toolbar>
+    </header>
 
-    @for (message of chat.messages(); track message.id) {
-      <article class="message" [class.user]="message.role === 'user'">
-        <h2 class="who">{{ message.role === 'user' ? 'You' : 'Assistant' }}</h2>
-        @if (message.text) {
-          <p class="text">{{ message.text }}</p>
-        }
-        @if ($last && statusLine(); as line) {
-          <p class="note status">
-            <mat-spinner diameter="16" aria-hidden="true" />
-            {{ line }}
-          </p>
-        }
-        @if (message.stopped) {
-          <p class="note">Stopped.</p>
-        }
-        @if (message.error) {
-          <p class="error">{{ message.error }}</p>
-          @if (message.retryable && $last && !chat.busy()) {
-            <button matButton="outlined" type="button" (click)="retry()">Try again</button>
-          }
-        }
-      </article>
-    }
-  </div>
-</main>
-
-<div class="visually-hidden" aria-live="polite">{{ announcement() }}</div>
-
-<footer class="composer">
-  <form class="column" (submit)="submit($event)">
-    <div class="row">
-    <mat-form-field appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Message</mat-label>
-      <textarea
-        #input
-        matInput
-        id="message"
-        cdkTextareaAutosize
-        cdkAutosizeMinRows="1"
-        cdkAutosizeMaxRows="6"
-        aria-describedby="ai-note"
-        [formField]="chatForm.message"
-        (keydown.enter)="onEnter($event)"
-      ></textarea>
-      @if (showCount()) {
-        <mat-hint align="end" class="count" [class.over]="length() > maxLength"
-          >{{ length() }} / {{ maxLength }}</mat-hint
-        >
-      }
-    </mat-form-field>
-    @if (chat.busy()) {
-      <button matButton="outlined" type="button" (click)="stop()">Stop</button>
-    }
-    <button matButton="filled" type="submit" [disabled]="!canSend()">Send</button>
-    </div>
-    <p id="ai-note" class="note">
-      Answers are written by an AI assistant from the product catalogue.
-    </p>
-  </form>
-</footer>
+    <main>
+      <p class="intro">
+        Construction materials with their tested properties. Browse the catalogue, or ask Forte
+        about any product.
+      </p>
+      <app-catalogue (ask)="ask($event)" />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

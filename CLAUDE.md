@@ -20,6 +20,7 @@ These apply to every feature.
 - **Current version only.** Documents exist in many versions. Search, retrieval and answers use the most current version of each document by default. Do not return, quote or mix older versions into an answer unless the user explicitly asks for a past version or a comparison, and then label which version each statement comes from.
 - **Enforce it in code.** Apply "latest version" in the data-access layer and in any search index, the same way `visibleToBot` is applied today. Never rely on the model's prompt alone. Any design for document storage, ingestion or indexing must make "which version is current" an explicit, queryable fact, and must stop a superseded version from being served once a newer one arrives.
 - **Visibility.** Tools reach only records marked visible to the bot. A hidden record and a non-existent one must be indistinguishable to the model and the user.
+- **Product page.** `GET /api/products` returns every bot-visible product (the same set the assistant sees) through `ProductsService`. A chat request may carry `productSku`, the product the user has open; the API looks it up with `getBySku` and, only if found, prefixes the user's message with a context line built from the database row. A hidden or unknown SKU is ignored silently. The web app starts a new conversation whenever the selected product changes.
 
 ## Agents
 
@@ -46,7 +47,7 @@ Delegate work to the agent that owns the area.
 ## Layout
 
 - `apps/api`: NestJS 12 API. Chat module in `src/chat` (SSE endpoint `POST /api/chat/stream`, Gemini loop, tools in `src/chat/tools`), bot data access in `src/products`.
-- `apps/web`: Angular 22 app with Angular Material 22 (Material 3 theme in `src/styles.scss`; colours come only from `--mat-sys-*` tokens). One chat page; the stream client is in `src/app/chat.ts` and `src/app/sse-parser.ts`. The dev server proxies `/api` to the API. Model output is rendered as plain text, never as HTML.
+- `apps/web`: Angular 22 app with Angular Material 22 (Material 3 theme in `src/styles.scss`; colours come only from `--mat-sys-*` tokens). The home page is a product catalogue (`src/app/catalogue.ts`); each product card and the header open an "Ask Forte" chat side panel (`src/app/chat-panel.ts`) with a card for the selected product. The stream client is in `src/app/chat.ts` and `src/app/sse-parser.ts`. The dev server proxies `/api` to the API. Model output is rendered as plain text, never as HTML.
 - `packages/chat-contract`: types shared by both apps (declarations only, import with `import type`).
 - `compose.yaml`: dev Postgres on port 5434, plus `migrate` (migrations and seed), `api` and `web` (nginx). There are no profiles: `docker compose up --build` runs the whole stack on http://localhost:8088. Dockerfiles are in `apps/api` and `apps/web`, built with the repo root as context.
 
@@ -68,6 +69,9 @@ Run from the repo root unless noted.
 - Prisma is version 8 (release candidate), not classic Prisma. There is no `schema.prisma`, `PrismaClient`, `prisma generate` or `migrate dev`. Use the `prisma-8` skill in `apps/api/.claude/skills/`.
 - Run `npm install` from the repo root with `-w api` or `-w web`, never inside an app folder.
 - The global `ng` CLI is older than the workspace. Use `npx ng` from `apps/web`.
+- `ProductProperty` in `packages/chat-contract` must stay a `type`, not an `interface`, or it stops being assignable to the JSON column type and the API build fails in `seed.ts`.
+- The chat route is rate limited in e2e tests too (10 per minute per app instance). Keep each `describe` in `apps/api/test/chat.e2e-spec.ts` to 10 requests or fewer.
+- The web app's initial bundle is about 485 kB against a 500 kB warning budget in `apps/web/angular.json`.
 - The API is ESM: relative imports end in `.js`. Tests are Vitest and lint is oxlint (the NestJS 12 defaults), not Jest and ESLint.
 - Gemini model names and API shapes come from the `gemini-api-dev` skill, never from memory. Conversations are stored by Google (`store: true`).
 - The Gemini API key lives in `apps/api/.env`. It must never reach the browser or the logs.
