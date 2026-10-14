@@ -171,6 +171,38 @@ describe('ChatPanel', () => {
     expect(liveRegion()).toBe('Assistant: C32/40 reaches 40 MPa.\n<b>not html</b>');
   });
 
+  describe('model line', () => {
+    const modelLines = () =>
+      [...root.querySelectorAll('.message .model')].map((p) => p.textContent.trim());
+
+    it('shows which provider and model wrote a completed answer, not in the announcement', async () => {
+      await type('q');
+      await pressEnter();
+      await rendered(streams[0].emit('text', { delta: 'Answer.' }));
+      expect(modelLines()).toEqual([]); // not while it is being written
+
+      await rendered(
+        streams[0].emit(
+          'done',
+          done('int-1', [], { provider: 'claude', model: 'claude-sonnet-5-5' }),
+        ),
+      );
+      await rendered(streams[0].close());
+
+      expect(modelLines()).toEqual(['Answered by Claude · claude-sonnet-5-5']);
+      expect(root.querySelectorAll('.message')[1].querySelector('.model')).not.toBeNull();
+      expect(liveRegion()).toBe('Assistant: Answer.');
+    });
+
+    it('shows no model line for a failed answer', async () => {
+      await type('q');
+      await pressEnter();
+      await rendered(streams[0].emit('error', { code: 'model_error', message: 'Cut off.' }));
+      await rendered(streams[0].close());
+      expect(modelLines()).toEqual([]);
+    });
+  });
+
   it('shows an error under the partial text and offers Try again', async () => {
     await type('q');
     await pressEnter();

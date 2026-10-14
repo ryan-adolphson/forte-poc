@@ -70,7 +70,7 @@ Run from the repo root unless noted.
 - API checks: `npm run build -w api`, `npm run lint -w api`, `npm test -w api`, `npm run test:e2e -w api`
 - Web checks: `npm run build -w web`, `npm run test -w web -- --watch=false`
 - Schema change: edit `apps/api/src/prisma/contract.prisma`, then `npm run db:plan -w api -- --name <slug>`, read the plan, then `npm run db:migrate -w api`
-- Scope eval: `npm run eval:scope -w api` is a dry run that lists the cases. Adding `-- --yes` calls the real model and costs money, so ask before running it.
+- Scope eval: `npm run eval:scope -w api` is a dry run that lists the cases and the model it would use (the saved Settings choice or the server default; it needs the database). Adding `-- --yes` calls the real model and costs money, so ask before running it. `-- --provider claude` or `-- --model <id>` picks a model for that run only; every model in `apps/api/src/chat/models.ts` must pass the same cases.
 
 ## Gotchas
 
@@ -82,10 +82,13 @@ Run from the repo root unless noted.
 - Without `SESSION_SECRET`, sessions end when the API restarts. Cookies are not scoped by port, so the dev stack (:4200) and the Docker stack (:8088) overwrite each other's session.
 - `ProductProperty` in `packages/chat-contract` must stay a `type`, not an `interface`, or it stops being assignable to the JSON column type and the API build fails in `seed.ts`.
 - The chat route is rate limited in e2e tests too (10 per minute per app instance). Keep each `describe` in `apps/api/test/chat.e2e-spec.ts` to 10 requests or fewer.
-- The web app's initial bundle is about 497 kB against a 600 kB warning budget in `apps/web/angular.json`, because each page is a lazy route. Load new dialogs and other secondary UI lazily, as `product-details.ts` is.
+- The web app's initial bundle is about 520 kB against a 600 kB warning budget in `apps/web/angular.json`, because each page is a lazy route. Load new dialogs and other secondary UI lazily, as `product-details.ts` is.
 - The API is ESM: relative imports end in `.js`. Tests are Vitest and lint is oxlint (the NestJS 12 defaults), not Jest and ESLint.
 - Gemini model names and API shapes come from the `gemini-api-dev` skill, never from memory. Conversations are stored by Google (`store: true`).
 - The Gemini API key lives in `apps/api/.env`. It must never reach the browser or the logs.
+- The assistant's provider and model are one server-wide setting (table `assistant_settings`, `GET`/`PUT /api/settings/assistant`, the web Settings page), chosen from the allow-list in `apps/api/src/chat/models.ts` and resolved at the start of each turn; chat requests do not choose a model. Only `test/settings.e2e-spec.ts` may touch that row (it saves and restores it); other e2e tests use the in-memory setting from `test/chat-app.ts`.
+- Two model providers, Gemini and Claude, share one loop in `ChatService.run`; only the adapters (`apps/api/src/chat/gemini.ts`, `claude.ts`, behind `provider.ts`) differ. Product rules, tools, the system prompt and citations stay in shared code, never in an adapter. Claude API usage comes from the `claude-api` skill, never from memory; `ANTHROPIC_API_KEY` lives in `apps/api/.env` and must never reach the browser or the logs.
+- Claude conversations live in API memory (`ClaudeConversations`: 2 hours idle, 500 conversations, 60 messages), are lost on restart, and only answered turns are stored. Gemini conversations are stored by Google.
 - Stop the dev database with `npm run db:down`, which keeps its data. `docker compose down` stops the Docker stack and the dev database together; `docker compose down -v` deletes the data. Never run `down -v` without asking.
 - The Docker stack shares the dev database. Its `migrate` job applies the migrations in the working tree and re-runs the seed on every `up`.
 - `docker compose config` prints the Gemini key in clear text, because it expands `apps/api/.env`. Do not run it with visible output.

@@ -9,6 +9,7 @@ import { MatSidenavHarness } from '@angular/material/sidenav/testing';
 import { Title } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
+import { SETTINGS } from '../testing/assistant-settings';
 import { provideSignedIn } from '../testing/auth';
 import { DOCUMENTS } from '../testing/documents';
 import { FakeStream, done, fakeFetch, settle } from '../testing/fake-chat-stream';
@@ -60,7 +61,11 @@ describe('App', () => {
   async function answerLists(): Promise<void> {
     TestBed.tick();
     for (const request of http.match(() => true)) {
-      request.flush({ products: PRODUCTS, documents: DOCUMENTS });
+      request.flush(
+        request.request.url === '/api/settings/assistant'
+          ? SETTINGS
+          : { products: PRODUCTS, documents: DOCUMENTS },
+      );
     }
     await settle(); // the focus move after a navigation
     await fixture.whenStable();
@@ -242,18 +247,20 @@ describe('App', () => {
   });
 
   describe('navigation', () => {
-    it('has three links in order, with an icon each', async () => {
+    it('has four links in order, with an icon each', async () => {
       await visit('/');
 
       expect(navLinks().map((a) => a.textContent.trim())).toEqual([
         'Products',
         'Documents',
         'Forte AI',
+        'Settings',
       ]);
       expect(navLinks().map((a) => a.getAttribute('href'))).toEqual([
         '/products',
         '/documents',
         '/forte-ai',
+        '/settings',
       ]);
       for (const link of navLinks()) {
         expect(link.querySelector('svg')!.getAttribute('aria-hidden')).toBe('true');
@@ -264,12 +271,16 @@ describe('App', () => {
       await visit('/documents');
       const current = () => navLinks().map((a) => a.getAttribute('aria-current'));
 
-      expect(current()).toEqual([null, 'page', null]);
+      expect(current()).toEqual([null, 'page', null, null]);
       expect(navLink('Documents').classList).toContain('mdc-list-item--activated');
       expect(navLink('Products').classList).not.toContain('mdc-list-item--activated');
 
       await follow('Forte AI');
-      expect(current()).toEqual([null, null, 'page']);
+      expect(current()).toEqual([null, null, 'page', null]);
+
+      await follow('Settings');
+      expect(current()).toEqual([null, null, null, 'page']);
+      expect(navLink('Settings').classList).toContain('mdc-list-item--activated');
     });
 
     it('goes to each page, sets its title and moves focus to its heading', async () => {
@@ -473,7 +484,11 @@ describe('App', () => {
 
   describe('Forte AI page', () => {
     it('shows the general chat in the page, and the panel is not open', async () => {
-      await visit('/forte-ai');
+      await TestBed.inject(Router).navigateByUrl('/forte-ai');
+      TestBed.tick();
+      http.expectNone('/api/chat/providers'); // the model is chosen on the Settings page
+      expect(root.querySelector('mat-button-toggle-group')).toBeNull();
+      await answerLists();
 
       expect(root.querySelectorAll('app-chat-panel')).toHaveLength(1);
       expect(root.querySelector('main app-chat-panel')).not.toBeNull();

@@ -11,6 +11,56 @@ export interface ChatRequest {
   productSku?: string;
 }
 
+export type ChatProviderId = 'gemini' | 'claude';
+
+/**
+ * The assistant model, chosen on the Settings page and saved on the server for everyone.
+ * Every chat turn uses whatever is saved when the turn starts; the request does not choose.
+ */
+export interface AssistantSettings {
+  provider: ChatProviderId;
+  /** A model id from that provider's `models` list, for example `claude-sonnet-5-5`. */
+  model: string;
+}
+
+export interface AssistantModelOption {
+  id: string;
+  /** For people, for example `Claude Sonnet 5.5`. */
+  label: string;
+}
+
+export interface AssistantProviderOption {
+  id: ChatProviderId;
+  /** For people, for example `Claude`. */
+  label: string;
+  /** False when the server has no API key for this provider: it cannot be selected. */
+  configured: boolean;
+  models: AssistantModelOption[];
+}
+
+/** Body of GET /api/settings/assistant, and of a successful PUT. */
+export interface AssistantSettingsResponse {
+  current: AssistantSettings;
+  /** Every provider the app supports, configured or not, with its allowed models. */
+  options: AssistantProviderOption[];
+  /** When the setting was last saved (ISO timestamp), or null while the server default applies. */
+  updatedAt: string | null;
+}
+
+/** Body of PUT /api/settings/assistant. */
+export type UpdateAssistantSettingsRequest = AssistantSettings;
+
+/**
+ * JSON body of HTTP 400 from PUT /api/settings/assistant when the body is well-formed but
+ * the choice cannot be used: the model is not allowed for that provider, or the provider
+ * has no API key on the server. (A malformed body gets the framework's validation 400.)
+ */
+export interface SettingsErrorBody {
+  code: 'invalid_setting';
+  /** For people, for example `Claude is not configured on the server.` */
+  message: string;
+}
+
 /**
  * One measured or declared property of a product. A `type`, not an `interface`, on
  * purpose: the API stores these in a JSON column, and only a type alias is assignable to
@@ -132,7 +182,14 @@ export interface ChatEventMap {
    * `sources`: what the answer drew on, data sheets first. Empty when the answer used no
    * source, for example when the assistant declined. At most 8.
    */
-  done: { interactionId: string; usage: ChatUsage | null; sources: ChatSource[] };
+  done: {
+    interactionId: string;
+    usage: ChatUsage | null;
+    sources: ChatSource[];
+    /** Which provider and model wrote this answer. */
+    provider: ChatProviderId;
+    model: string;
+  };
   error: { code: ChatErrorCode; message: string };
 }
 

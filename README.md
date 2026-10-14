@@ -50,6 +50,21 @@ and the assistant answers each message with a `not_configured` error.
 
 Conversations are stored by Google so that follow-up questions keep their context.
 
+### Choosing the model
+
+The Settings page in the left nav chooses the assistant's provider and model for everyone using the
+app, from a fixed list (`apps/api/src/chat/models.ts`): Gemini 3.1 Flash-Lite, 3.5 Flash-Lite and
+3.8 Flash; Claude Sonnet 5.5, Haiku 5.5 and Opus 5.5. Both providers use the same tools, rules and
+citations, and each answer shows the model that wrote it.
+
+- Until something is saved, the API uses Gemini with `GEMINI_MODEL`, or Claude with `CLAUDE_MODEL`
+  (default `claude-sonnet-5-5`) if only Claude has a key. A saved choice that can no longer be used
+  falls back to that default.
+- Set `ANTHROPIC_API_KEY` in `apps/api/.env` to make Claude selectable; without it Claude is shown
+  but disabled. On the Droplet, add the key to `/opt/forte/apps/api/.env` and redeploy.
+- Changing the Gemini model starts a new conversation; Claude conversations continue. Claude
+  conversations are kept in the API's memory and are lost when the API restarts.
+
 ## Run in development
 
 Two terminals:

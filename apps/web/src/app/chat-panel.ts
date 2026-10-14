@@ -52,6 +52,14 @@ export class ChatPanel {
   protected readonly chat = inject(Chat);
 
   protected readonly maxLength = MAX_LENGTH;
+  /**
+   * For the "Answered by" line: the provider's name, then the model id from the `done` event.
+   * The model labels live in the settings, which the chat does not load.
+   */
+  protected readonly providerLabels: Partial<Record<string, string>> = {
+    gemini: 'Gemini',
+    claude: 'Claude',
+  };
   /** Example questions for the empty state: about the selected product, or general ones. */
   protected readonly examples = computed(() =>
     this.chat.product()

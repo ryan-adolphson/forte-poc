@@ -7,6 +7,7 @@ import { DocumentsModule } from './documents/documents.module.js';
 import { HealthController } from './health/health.controller.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ProductsModule } from './products/products.module.js';
+import { SettingsModule } from './settings/settings.module.js';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ProductsModule } from './products/products.module.js';
     AuthModule,
     ProductsModule,
     DocumentsModule,
+    SettingsModule,
     ChatModule,
   ],
   controllers: [HealthController],

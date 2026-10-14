@@ -1,43 +1,17 @@
 import type { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
-import { AppModule } from '../src/app.module.js';
-import { GEMINI_STREAM } from '../src/chat/gemini.js';
-import { appConfig, validateEnv } from '../src/config/app.config.js';
-import { configureApp } from '../src/configure-app.js';
+import { validateEnv } from '../src/config/app.config.js';
 import { hiddenSkus } from '../src/prisma/seed-data.js';
+import { createApp, parseEvents } from './chat-app.js';
 import { fakeGemini, functionCallTurn, textTurn } from './fake-gemini.js';
 import { signIn } from './sign-in.js';
 
-// The Gemini seam is replaced by a fake, so no test here calls the real model.
-async function createApp(gemini: ReturnType<typeof fakeGemini>, chatRateLimit?: number) {
-  const builder = Test.createTestingModule({ imports: [AppModule] })
-    .overrideProvider(GEMINI_STREAM)
-    .useValue(gemini.stream);
-  if (chatRateLimit !== undefined) {
-    // AppModule's ConfigModule has already loaded .env into process.env.
-    builder.overrideProvider(appConfig.KEY).useValue({ ...validateEnv(process.env), chatRateLimit });
-  }
-  const app: INestApplication<App> = (await builder.compile()).createNestApplication();
-  configureApp(app);
-  await app.init();
-  return app;
-}
-
-/** Parses an SSE body into `{ event, data }` pairs. */
-function parseEvents(body: string) {
-  return body
-    .trim()
-    .split('\n\n')
-    .map((block) => {
-      const [eventLine, dataLine] = block.split('\n');
-      return {
-        event: eventLine!.replace(/^event: /, ''),
-        data: JSON.parse(dataLine!.replace(/^data: /, '')) as unknown,
-      };
-    });
-}
+// No test here calls a real model, and none reads or writes the shared assistant-setting
+// row: `createApp` gives an in-memory setting with nothing saved, so every turn uses the
+// server default (Gemini with GEMINI_MODEL). The Settings endpoints, and chat turns under
+// a saved setting (Claude included), are tested in settings.e2e-spec.ts.
+const MODEL = validateEnv(process.env).geminiModel;
 
 describe('POST /api/chat/stream', () => {
   let app: INestApplication<App>;
@@ -72,7 +46,7 @@ describe('POST /api/chat/stream', () => {
       {
         event: 'done',
         data: {
-          interactionId: 'v1_b',
+          interactionId: `${MODEL}:v1_b`,
           usage: { inputTokens: 14, outputTokens: 24, totalTokens: 38 },
           // A catalogue answer for a product that has a data sheet: the one source is that
           // data sheet at its current revision, and there is no catalogue source
@@ -88,10 +62,13 @@ describe('POST /api/chat/stream', () => {
               url: '/api/documents/DS-FRT-CON-C3240/file',
             },
           ],
+          provider: 'gemini',
+          model: MODEL,
         },
       },
     ]);
 
+    expect(gemini.requests[0]!.model).toBe(MODEL);
     expect(gemini.requests[0]!.input).toBe('What is the cube strength of C32/40?');
     // The function result sent back to the model came from the real ProductsService, with
     // the reference from the real DocumentsService: the current revision, and no sheet text.
@@ -115,6 +92,8 @@ describe('POST /api/chat/stream', () => {
     ['an unknown property', { message: 'hi', model: 'other' }],
     ['an over-long productSku', { message: 'hi', productSku: 'x'.repeat(65) }],
     ['an empty productSku', { message: 'hi', productSku: '' }],
+    // The provider and model are the server-wide setting now, never part of the request.
+    ['a provider field', { message: 'hi', provider: 'claude' }],
   ])('rejects %s with 400 and does not call the model', async (_case, body) => {
     const callsBefore = gemini.requests.length;
 
@@ -130,7 +109,7 @@ describe('POST /api/chat/stream with productSku', () => {
   const gemini = fakeGemini(textTurn('v1_a', ['ok']));
   const DONE = {
     event: 'done',
-    data: { interactionId: 'v1_a', usage: expect.any(Object) as unknown, sources: [] },
+    data: { interactionId: `${MODEL}:v1_a`, usage: expect.any(Object) as unknown, sources: [], provider: 'gemini', model: MODEL },
   };
 
   beforeAll(async () => {

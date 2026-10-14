@@ -1,19 +1,31 @@
 /**
  * Scope eval: sends a fixed set of questions through the real ChatService, the real
- * Gemini model and the seeded database (products, and data sheets from
+ * model and the seeded database (products, and data sheets from
  * `npm run db:ingest-docs -w api`), and checks each answer with simple code checks.
+ * The expectations are the same for every provider and model.
  *
- *   npm run eval:scope -w api            # dry run: lists the cases, calls nothing
- *   npm run eval:scope -w api -- --yes   # calls the real model and costs money
+ * The model is the one chat turns use now (the saved Settings value, or the server
+ * default), unless `--provider` and/or `--model` choose one for this run only (the saved
+ * setting is not changed). `--provider` alone uses that provider's default model;
+ * `--model` alone must be an allowed model of a provider.
+ *
+ *   npm run eval:scope -w api                                        # dry run: lists the cases and the model, calls nothing
+ *   npm run eval:scope -w api -- --yes                               # the current setting: calls the real model, costs money
+ *   npm run eval:scope -w api -- --provider claude --yes             # Claude's default model
+ *   npm run eval:scope -w api -- --model gemini-3.5-flash-lite --yes # one allowed model
+ *
+ * Every run, the dry run included, needs the database (it reads the saved setting).
  *
  * Run it whenever the system prompt, the tools or the model change. Exits non-zero when
  * the key is missing or any case fails.
  */
-import type { ChatSource } from '@forte/chat-contract';
+import type { AssistantSettings, ChatProviderId, ChatSource } from '@forte/chat-contract';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../../app.module.js';
 import { appConfig, type AppConfig } from '../../config/app.config.js';
+import { AssistantSettingsResolver } from '../assistant-settings.js';
 import { ChatService, MAX_TOOL_ROUNDS } from '../chat.service.js';
+import { modelsFor, PROVIDER_IDS, PROVIDER_LABELS } from '../models.js';
 
 type EvalCase = {
   name: string;
@@ -257,25 +269,79 @@ function check(
   return failures;
 }
 
+/** The value after `flag`, undefined when the flag is absent; exits when the value is missing. */
+function flagValue(flag: string): string | undefined {
+  const at = process.argv.indexOf(flag);
+  if (at === -1) return undefined;
+  const value = process.argv[at + 1];
+  if (value === undefined || value.startsWith('--')) {
+    console.error(`${flag} needs a value.`);
+    process.exit(1);
+  }
+  return value;
+}
+
+const providerArg = flagValue('--provider');
+const modelArg = flagValue('--model');
+if (providerArg !== undefined && !PROVIDER_IDS.includes(providerArg as ChatProviderId)) {
+  console.error(`--provider must be one of ${PROVIDER_IDS.join(', ')}.`);
+  process.exit(1);
+}
+
+const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn'] });
+const config = app.get<AppConfig>(appConfig.KEY);
+const defaultModel = (id: ChatProviderId) => (id === 'gemini' ? config.geminiModel : config.claudeModel);
+
+/** The provider and model for this run, and where they came from. Exits on an invalid choice. */
+async function choose(): Promise<{ choice: AssistantSettings; from: string }> {
+  if (providerArg === undefined && modelArg === undefined) {
+    const { current, source } = await app.get(AssistantSettingsResolver).resolve();
+    if (current === null) {
+      console.error('No provider has an API key (apps/api/.env). The scope eval needs the real model.');
+      await app.close();
+      process.exit(1);
+    }
+    return { choice: current, from: `the ${source === 'saved' ? 'saved setting' : 'server default'}` };
+  }
+  const providers = providerArg !== undefined ? [providerArg as ChatProviderId] : PROVIDER_IDS;
+  const provider = modelArg === undefined
+    ? providers[0]!
+    : providers.find((id) => modelsFor(id, defaultModel(id)).some((option) => option.id === modelArg));
+  if (provider === undefined) {
+    const allowed = providers.flatMap((id) => modelsFor(id, defaultModel(id)).map((option) => option.id));
+    console.error(`--model must be one of: ${allowed.join(', ')}.`);
+    await app.close();
+    process.exit(1);
+  }
+  return { choice: { provider, model: modelArg ?? defaultModel(provider) }, from: 'the command line' };
+}
+
+const { choice, from } = await choose();
+const providerName = PROVIDER_LABELS[choice.provider];
+
 if (!process.argv.includes('--yes')) {
-  console.log(`Scope eval, dry run. ${cases.length} cases:\n`);
+  console.log(`Scope eval, dry run, ${choice.provider} ${choice.model} (from ${from}). ${cases.length} cases:\n`);
   for (const testCase of cases) {
     const viewing = testCase.productSku === undefined ? '' : ` (viewing ${testCase.productSku})`;
     console.log(`  - ${testCase.name}: ${JSON.stringify(testCase.message)}${viewing}`);
   }
   console.log(
-    `\nRunning it sends ${cases.length} user turns to the real Gemini model: at least ${cases.length} ` +
+    `\nRunning it sends ${cases.length} user turns to the real ${providerName} model: at least ${cases.length} ` +
       `model calls, typically about ${cases.length * 2}, at most ${cases.length * (MAX_TOOL_ROUNDS + 1)} ` +
       `(each tool round is one more call, capped at ${MAX_TOOL_ROUNDS} per turn). This costs money, and ` +
-      'the conversations are stored by Google.\nNothing was called. Re-run with -- --yes to run it.',
+      (choice.provider === 'gemini'
+        ? 'the conversations are stored by Google.'
+        : 'the history is kept in this process and re-sent to Anthropic on each call.') +
+      '\nNothing was called. Re-run with --yes added to run it.',
   );
+  await app.close();
   process.exit(0);
 }
 
-const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn'] });
-const config = app.get<AppConfig>(appConfig.KEY);
-if (config.geminiApiKey === undefined) {
-  console.error('GEMINI_API_KEY is not set (apps/api/.env). The scope eval needs the real model.');
+const key = choice.provider === 'claude' ? config.anthropicApiKey : config.geminiApiKey;
+if (key === undefined) {
+  const name = choice.provider === 'claude' ? 'ANTHROPIC_API_KEY' : 'GEMINI_API_KEY';
+  console.error(`${name} is not set (apps/api/.env). The scope eval needs the real model.`);
   await app.close();
   process.exit(1);
 }
@@ -283,7 +349,7 @@ if (config.geminiApiKey === undefined) {
 const chat = app.get(ChatService);
 let failed = 0;
 let totalTokens = 0;
-console.log(`Scope eval against ${config.geminiModel}\n`);
+console.log(`Scope eval against ${choice.provider} ${choice.model} (from ${from})\n`);
 
 for (const testCase of cases) {
   let answer = '';
@@ -291,9 +357,11 @@ for (const testCase of cases) {
   const toolCalls: string[] = [];
   let sources: ChatSource[] = [];
   // Each case is its own conversation: no previousInteractionId.
+  // The choice is passed on every turn, so a Settings change during the run has no effect.
   for await (const event of chat.run(
     { message: testCase.message, productSku: testCase.productSku },
     new AbortController().signal,
+    choice,
   )) {
     if (event.event === 'text') answer += event.data.delta;
     if (event.event === 'tool' && event.data.status === 'started') toolCalls.push(event.data.name);

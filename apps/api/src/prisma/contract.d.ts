@@ -18,9 +18,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'dda80a61246bf5e9a7ae93fdc54706ae9d335a7e4e2b3a87741b091b73360130'>;
+  StorageHashBase<'31ce96f3db7981ce65817ba31792b95aa35039446cb2b1a0a3a234a5a8bdbc0e'>;
 export type ExecutionHash =
-  ExecutionHashBase<'de00187568b28308d7aa9bc3d24a05a109c45e52267d7426ce2f2ffb362933c7'>;
+  ExecutionHashBase<'79d86902af344ee700185cf0887a158298b35019415dc34b0f5f9f5ebaeb4b1b'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -234,6 +234,12 @@ type DefaultLiteralValue<CodecId extends string, Encoded> = CodecId extends keyo
 
 export type FieldOutputTypes = {
   readonly public: {
+    readonly AssistantSetting: {
+      readonly id: CodecTypes['pg/int4@1']['output'];
+      readonly model: CodecTypes['pg/text@1']['output'];
+      readonly provider: CodecTypes['pg/text@1']['output'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['output'];
+    };
     readonly Document: {
       readonly changeNote: CodecTypes['pg/text@1']['output'] | null;
       readonly content: CodecTypes['pg/bytea@1']['output'];
@@ -265,6 +271,12 @@ export type FieldOutputTypes = {
 };
 export type FieldInputTypes = {
   readonly public: {
+    readonly AssistantSetting: {
+      readonly id: CodecTypes['pg/int4@1']['input'];
+      readonly model: CodecTypes['pg/text@1']['input'];
+      readonly provider: CodecTypes['pg/text@1']['input'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
+    };
     readonly Document: {
       readonly changeNote: CodecTypes['pg/text@1']['input'] | null;
       readonly content: CodecTypes['pg/bytea@1']['input'];
@@ -296,6 +308,12 @@ export type FieldInputTypes = {
 };
 export type StorageColumnTypes = {
   readonly public: {
+    readonly assistant_settings: {
+      readonly id: CodecTypes['pg/int4@1']['output'];
+      readonly model: CodecTypes['pg/text@1']['output'];
+      readonly provider: CodecTypes['pg/text@1']['output'];
+      readonly updated_at: CodecTypes['pg/timestamptz-string@1']['output'];
+    };
     readonly documents: {
       readonly change_note: CodecTypes['pg/text@1']['output'] | null;
       readonly content: CodecTypes['pg/bytea@1']['output'];
@@ -327,6 +345,12 @@ export type StorageColumnTypes = {
 };
 export type StorageColumnInputTypes = {
   readonly public: {
+    readonly assistant_settings: {
+      readonly id: CodecTypes['pg/int4@1']['input'];
+      readonly model: CodecTypes['pg/text@1']['input'];
+      readonly provider: CodecTypes['pg/text@1']['input'];
+      readonly updated_at: CodecTypes['pg/timestamptz-string@1']['input'];
+    };
     readonly documents: {
       readonly change_note: CodecTypes['pg/text@1']['input'] | null;
       readonly content: CodecTypes['pg/bytea@1']['input'];
@@ -358,6 +382,13 @@ export type StorageColumnInputTypes = {
 };
 
 export namespace Models {
+  export type public_AssistantSetting = {
+    id: CodecTypes['pg/int4@1']['output'];
+    model: CodecTypes['pg/text@1']['output'];
+    provider: CodecTypes['pg/text@1']['output'];
+    updatedAt: CodecTypes['pg/timestamptz-string@1']['output'];
+    readonly [RelationKeys]?: never;
+  };
   export type public_Document = {
     changeNote: CodecTypes['pg/text@1']['output'] | null;
     content: CodecTypes['pg/bytea@1']['output'];
@@ -392,6 +423,7 @@ export namespace Models {
 
 export declare const models: {
   public: {
+    AssistantSetting: Models.public_AssistantSetting;
     Document: Models.public_Document;
     Product: Models.public_Product;
   };
@@ -415,6 +447,42 @@ type ContractBase = Omit<
         readonly kind: 'postgres-schema';
         readonly entries: {
           readonly table: {
+            readonly assistant_settings: {
+              columns: {
+                readonly id: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 1>;
+                  };
+                  readonly many: false;
+                };
+                readonly model: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly provider: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly updated_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [];
+              indexes: readonly [];
+              foreignKeys: readonly [];
+            };
             readonly documents: {
               columns: {
                 readonly change_note: {
@@ -629,6 +697,10 @@ type ContractBase = Omit<
   readonly target: 'postgres';
   readonly targetFamily: 'sql';
   readonly roots: {
+    readonly assistant_settings: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'AssistantSetting';
+    };
     readonly documents: { readonly namespace: 'public' & NamespaceId; readonly model: 'Document' };
     readonly products: { readonly namespace: 'public' & NamespaceId; readonly model: 'Product' };
   };
@@ -636,6 +708,40 @@ type ContractBase = Omit<
     readonly namespaces: {
       readonly public: {
         readonly models: {
+          readonly AssistantSetting: {
+            readonly fields: {
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly model: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly provider: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+            };
+            readonly relations: Record<string, never>;
+            readonly storage: {
+              readonly table: 'assistant_settings';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly id: { readonly column: 'id' };
+                readonly model: { readonly column: 'model' };
+                readonly provider: { readonly column: 'provider' };
+                readonly updatedAt: { readonly column: 'updated_at' };
+              };
+            };
+          };
           readonly Document: {
             readonly fields: {
               readonly changeNote: {
@@ -834,6 +940,15 @@ type ContractBase = Omit<
     readonly executionHash: ExecutionHash;
     readonly mutations: {
       readonly defaults: readonly [
+        {
+          readonly onCreate: { readonly id: 'timestampNow'; readonly kind: 'generator' };
+          readonly onUpdate: { readonly id: 'timestampNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'assistant_settings';
+            readonly field: 'updated_at';
+            readonly namespace: 'public';
+          };
+        },
         {
           readonly onCreate: { readonly id: 'timestampNow'; readonly kind: 'generator' };
           readonly onUpdate: { readonly id: 'timestampNow'; readonly kind: 'generator' };

@@ -2,6 +2,7 @@ import { Service, computed, inject, signal } from '@angular/core';
 import type {
   ChatErrorBody,
   ChatEvent,
+  ChatProviderId,
   ChatRequest,
   ChatSource,
   Product,
@@ -24,6 +25,9 @@ export interface ChatMessage {
    * that is still being written, failed, was stopped or lost its connection.
    */
   sources?: ChatSource[];
+  /** Assistant only: which provider and model wrote a completed answer, from its `done` event. */
+  provider?: ChatProviderId;
+  model?: string;
 }
 
 export type ChatStatus = 'idle' | 'sending' | 'streaming';
@@ -199,7 +203,11 @@ export class Chat {
       case 'done':
         this.interactionIdState.set(event.data.interactionId);
         // `?? []`: an API older than the contract sends no `sources`.
-        this.patch(id, { sources: event.data.sources ?? [] });
+        this.patch(id, {
+          sources: event.data.sources ?? [],
+          provider: event.data.provider,
+          model: event.data.model,
+        });
         return true;
       case 'error':
         this.patch(id, {

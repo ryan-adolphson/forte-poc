@@ -1,14 +1,17 @@
 import type { ChatEvent } from '@forte/chat-contract';
 import { errorTurn, fakeGemini, functionCallTurn, textTurn } from '../../test/fake-gemini.js';
-import type { AppConfig } from '../config/app.config.js';
+import { testResolver } from '../../test/fake-settings.js';
 import type { DocumentsService } from '../documents/documents.service.js';
 import type { ProductsService } from '../products/products.service.js';
 import { ChatService, MAX_TOOL_ROUNDS } from './chat.service.js';
-import type { GeminiStream } from './gemini.js';
+import { geminiModel, type GeminiStream } from './gemini.js';
 import { SYSTEM_PROMPT } from './system-prompt.js';
 import { chatTools } from './tools/index.js';
 
-const config = { geminiModel: 'gemini-3.8-flash' } as AppConfig;
+/** Nothing saved and only Gemini configured: every turn uses Gemini's default model. */
+const MODEL = 'gemini-3.8-flash';
+/** What `done` adds about who answered. */
+const ANSWERED_BY = { provider: 'gemini', model: MODEL };
 
 const product = {
   sku: 'FRT-CON-C3240',
@@ -50,11 +53,12 @@ function setup(gemini: GeminiStream | null) {
     getBySku: vi.fn().mockResolvedValue(product),
     listCategories: vi.fn().mockResolvedValue(['concrete']),
   };
+  const models = { gemini: gemini && geminiModel(gemini), claude: null };
   const service = new ChatService(
-    config,
-    gemini,
+    models,
     products as unknown as ProductsService,
     documents as unknown as DocumentsService,
+    testResolver(models),
   );
   return { service, products, documents };
 }
@@ -77,17 +81,19 @@ describe('ChatService.run', () => {
     const gemini = fakeGemini(textTurn('v1_a', ['Hello', ', world']));
     const { service } = setup(gemini.stream);
 
-    expect(await collect(service, 'hi', undefined, 'v1_prev')).toEqual([
+    expect(await collect(service, 'hi', undefined, `${MODEL}:v1_prev`)).toEqual([
       { event: 'start', data: {} },
       { event: 'text', data: { delta: 'Hello' } },
       { event: 'text', data: { delta: ', world' } },
       {
         event: 'done',
         data: {
-          interactionId: 'v1_a',
+          // The model, then Google's interaction id: the next turn continues only on that model.
+          interactionId: `${MODEL}:v1_a`,
           usage: { inputTokens: 7, outputTokens: 12, totalTokens: 19 },
           // No tool ran, so there is nothing to cite.
           sources: [],
+          ...ANSWERED_BY,
         },
       },
     ]);
@@ -191,11 +197,12 @@ describe('ChatService.run', () => {
         event: 'done',
         // The last interaction's id continues the conversation; usage is summed over both calls.
         data: {
-          interactionId: 'v1_b',
+          interactionId: `${MODEL}:v1_b`,
           usage: { inputTokens: 14, outputTokens: 24, totalTokens: 38 },
           // The answer names no product, so the one that was fetched on purpose is the source.
           // It has a data sheet, so that is what is shown, built from the tool's reference.
           sources: [DATA_SHEET_SOURCE],
+          ...ANSWERED_BY,
         },
       },
     ]);

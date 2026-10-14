@@ -10,12 +10,15 @@ export interface FakeStream {
   close(): Promise<void>;
 }
 
-/** The data of a `done` event: a completed turn that drew on `sources`. */
-export const done = (interactionId: string, sources: ChatSource[] = []): ChatEventMap['done'] => ({
-  interactionId,
-  usage: null,
-  sources,
-});
+/** The data of a `done` event: a completed turn that drew on `sources`, written by Gemini. */
+export const done = (
+  interactionId: string,
+  sources: ChatSource[] = [],
+  model: Pick<ChatEventMap['done'], 'provider' | 'model'> = {
+    provider: 'gemini',
+    model: 'gemini-test',
+  },
+): ChatEventMap['done'] => ({ interactionId, usage: null, sources, ...model });
 
 export const DATA_SHEET: ChatSource = {
   kind: 'datasheet',

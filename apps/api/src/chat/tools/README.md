@@ -4,8 +4,10 @@ A tool is a function the assistant can call to look something up. The model deci
 to call it; the server runs it and sends the result back. Tools are the only way catalogue
 and data sheet content reaches the model.
 
-Each tool is one file exporting a `ChatTool` (`tool.ts`): a `declaration` that Gemini
-sees, and a `run` handler. `index.ts` lists them in `chatTools`.
+Each tool is one file exporting a `ChatTool` (`tool.ts`): a `declaration` that the model
+sees, and a `run` handler. `index.ts` lists them in `chatTools`. The declaration is written
+in Gemini's function shape; Claude gets the same declarations converted by `toClaudeTool`
+in `../claude.ts`, so both providers always see the same tools.
 
 ## Add a tool
 
@@ -27,9 +29,10 @@ sees, and a `run` handler. `index.ts` lists them in `chatTools`.
      reference from `documents.getCurrentReferences(skus)` (one query for any number of
      SKUs). `selectSources` then shows a product that has a data sheet as that data sheet,
      once, and shows a catalogue line only for a product without one.
-3. Add it to the `chatTools` array in `index.ts`. Nothing else needs wiring: the request
-   builder (`../gemini.ts`) sends every declaration on every request and the loop
-   (`../chat.service.ts`) dispatches by name.
+3. Add it to the `chatTools` array in `index.ts`. Nothing else needs wiring: both request
+   builders (`buildGeminiRequest` in `../gemini.ts`, `buildClaudeRequest` in `../claude.ts`)
+   send every declaration on every request, Claude's through the one conversion
+   `toClaudeTool`, and the loop (`../chat.service.ts`) dispatches by name for both providers.
 4. Add cases to `tools.spec.ts` (valid arguments, bad arguments), and a case to
    `../eval/scope-eval.ts` if the tool changes what the assistant can answer.
 5. If the assistant should behave differently because of the tool, update `../system-prompt.ts`.
@@ -49,6 +52,13 @@ sees, and a `run` handler. `index.ts` lists them in `chatTools`.
 
 ```bash
 npm test -w api                      # unit tests, no model calls
-npm run eval:scope -w api            # dry run: lists the cases
+npm run eval:scope -w api            # dry run: lists the cases and the model it would use
 npm run eval:scope -w api -- --yes   # real model, costs money: ask first
+npm run eval:scope -w api -- --provider claude           # dry run on Claude's default model
+npm run eval:scope -w api -- --model claude-haiku-5-5    # dry run on one allowed model
 ```
+
+Without `--provider` / `--model` the eval uses the model chat turns use now: the one
+saved on the Settings page (`GET /api/settings/assistant`), or the server default. Every
+allowed model (`../models.ts`) must pass the same cases; run the eval on a model before
+adding it to that list.

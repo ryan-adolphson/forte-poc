@@ -4,8 +4,11 @@ import { TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { SETTINGS } from '../testing/assistant-settings';
 import { provideSignedIn } from '../testing/auth';
 import { routes } from './app.routes';
+import { signedIn } from './auth-guards';
+import { SettingsPage } from './settings-page';
 import { DocumentsPage } from './documents-page';
 import { ForteAiPage } from './forte-ai-page';
 import { ProductsPage } from './products-page';
@@ -28,7 +31,11 @@ describe('routes', () => {
   afterEach(() => {
     // Answer the page's list request, so nothing is left open.
     for (const request of TestBed.inject(HttpTestingController).match(() => true)) {
-      request.flush({ products: [], documents: [] });
+      request.flush(
+        request.request.url === '/api/settings/assistant'
+          ? SETTINGS
+          : { products: [], documents: [] },
+      );
     }
   });
 
@@ -55,6 +62,15 @@ describe('routes', () => {
     expect(url()).toBe('/forte-ai');
     expect(heading()).toBe('Forte AI');
     expect(title()).toBe('Forte AI – Forte');
+  });
+
+  it('shows the settings page, for signed-in users only', async () => {
+    await harness.navigateByUrl('/settings', SettingsPage);
+    expect(url()).toBe('/settings');
+    expect(heading()).toBe('Settings');
+    expect(title()).toBe('Settings – Forte');
+    const route = routes.find((r) => r.path === 'settings')!;
+    expect(route.canActivate).toEqual([signedIn]);
   });
 
   it('redirects an unknown address to the products page', async () => {

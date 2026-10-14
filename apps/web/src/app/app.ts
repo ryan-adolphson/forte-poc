@@ -75,6 +75,12 @@ export class App {
       label: 'Forte AI',
       icon: 'M4 5h16v11h-9l-5 4v-4H4zM8 9h8M8 12h5',
     },
+    {
+      path: '/settings',
+      label: 'Settings',
+      // Three sliders.
+      icon: 'M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4',
+    },
   ];
 
   /** Below 960px the navigation is hidden and opens over the page from the menu button. */

@@ -28,5 +28,11 @@ export const routes: Routes = [
     canActivate: [signedIn],
     loadComponent: () => import('./forte-ai-page').then((m) => m.ForteAiPage),
   },
+  {
+    path: 'settings',
+    title: 'Settings – Forte',
+    canActivate: [signedIn],
+    loadComponent: () => import('./settings-page').then((m) => m.SettingsPage),
+  },
   { path: '**', redirectTo: 'products' },
 ];

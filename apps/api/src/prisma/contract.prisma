@@ -46,3 +46,16 @@ model Document {
   @@index([productId])
   @@map("documents")
 }
+
+// App-wide assistant setting (provider and model), chosen on the Settings page. A single
+// row: the key is always 1 and the CHECK makes the database refuse any other. No row means
+// "use the server's configured default". Read and written only through SettingsService.
+model AssistantSetting {
+  id        Int                        @id @default(1)
+  provider  String
+  model     String
+  updatedAt temporal.updatedAtString() @map("updated_at")
+
+  @@check(expression: "id = 1", name: "assistant_settings_single_row")
+  @@map("assistant_settings")
+}

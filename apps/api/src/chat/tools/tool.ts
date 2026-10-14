@@ -21,7 +21,7 @@ export type ToolResult =
   | { ok: false; error: string };
 
 export interface ChatTool {
-  /** The function declaration sent to Gemini on every request. */
+  /** The function declaration sent on every request: as is to Gemini, converted for Claude (`../claude.ts`). */
   declaration: Interactions.Function & { name: string };
   /** `args` comes from the model and is untrusted: validate before use. */
   run(

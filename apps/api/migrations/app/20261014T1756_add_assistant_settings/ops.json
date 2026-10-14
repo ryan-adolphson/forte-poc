@@ -1,0 +1,41 @@
+[
+  {
+    "id": "table.assistant_settings",
+    "label": "Create table \"assistant_settings\"",
+    "summary": "Creates table \"assistant_settings\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "assistant_settings"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"assistant_settings\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"assistant_settings\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"assistant_settings\"",
+        "sql": "CREATE TABLE \"public\".\"assistant_settings\" (\n  \"id\" int4 DEFAULT 1 NOT NULL,\n  \"model\" text NOT NULL,\n  \"provider\" text NOT NULL,\n  \"updated_at\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"assistant_settings_single_row_7faf435e\" CHECK (id = 1)\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"assistant_settings\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"assistant_settings\""
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,96 @@
+@import './page.css';
+
+section {
+  max-width: 36rem;
+  margin-top: 1.5rem;
+}
+
+h3 {
+  margin: 0;
+  font: var(--mat-sys-title-medium);
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 3rem 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.state p {
+  margin: 0;
+}
+
+.current {
+  margin: 1.25rem 0 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--mat-sys-corner-medium);
+  background: var(--mat-sys-surface-container);
+}
+
+.current dt {
+  font: var(--mat-sys-label-medium);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.current dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  margin: 0.25rem 0 0;
+}
+
+.when {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+form {
+  margin-top: 1.25rem;
+}
+
+.label {
+  margin: 0;
+  font: var(--mat-sys-label-large);
+}
+
+.providers {
+  display: flex;
+  flex-direction: column;
+  margin: 0.25rem 0 1rem;
+}
+
+/* Under the radio button's label, lined up with its text (the 40px touch target + 4px gap). */
+.hint {
+  display: block;
+  margin: -0.5rem 0 0.5rem;
+  padding-inline-start: 2.75rem;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.model {
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.saved,
+.error {
+  margin: 0.75rem 0 0;
+}
+
+.saved:empty {
+  margin: 0;
+}
+
+.error {
+  color: var(--mat-sys-error);
+}

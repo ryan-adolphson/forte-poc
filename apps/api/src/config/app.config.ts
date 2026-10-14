@@ -40,6 +40,9 @@ export function validateEnv(env: Env) {
     /** Undefined when no key is set. Never log this. */
     geminiApiKey: optional(env, 'GEMINI_API_KEY'),
     geminiModel: optional(env, 'GEMINI_MODEL') ?? 'gemini-3.8-flash',
+    /** Undefined when no key is set: Claude is then not offered. Never log this. */
+    anthropicApiKey: optional(env, 'ANTHROPIC_API_KEY'),
+    claudeModel: optional(env, 'CLAUDE_MODEL') ?? 'claude-sonnet-5-5',
     chatRateLimit: integer(env, 'CHAT_RATE_LIMIT', 10),
     chatRateTtlSeconds: integer(env, 'CHAT_RATE_TTL_SECONDS', 60),
     /** Reverse proxies in front of the API whose `X-Forwarded-For` is trusted. 0 = none. */

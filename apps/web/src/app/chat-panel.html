@@ -51,6 +51,10 @@
     <button matButton="outlined" type="button" (click)="retry()">Try again</button>
     } } @if (message.sources?.length) {
     <app-chat-sources [sources]="message.sources!" />
+    } @if (message.model) {
+    <p class="model">
+      Answered by {{ providerLabels[message.provider!] ?? message.provider }} · {{ message.model }}
+    </p>
     }
   </article>
   }

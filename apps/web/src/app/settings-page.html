@@ -1,0 +1,76 @@
+<h2 tabindex="-1">Settings</h2>
+
+<section aria-labelledby="assistant-model">
+  <h3 id="assistant-model">Assistant model</h3>
+  <p class="intro">
+    The model that answers questions in Forte AI. The choice applies to everyone using the app and
+    to new questions from now on.
+  </p>
+
+  @if (settings.isLoading() && !settings.hasValue()) {
+  <p class="state" role="status">
+    <mat-spinner diameter="20" aria-hidden="true" />
+    Loading settings…
+  </p>
+  } @else if (settings.error()) {
+  <div class="state" role="alert">
+    <p>The settings could not be loaded.</p>
+    <button matButton="outlined" type="button" (click)="settings.reload()">Retry</button>
+  </div>
+  } @else if (settings.hasValue()) {
+  <dl class="current">
+    <dt>Current model</dt>
+    <dd>
+      <strong>{{ currentLabel() }}</strong>
+      <span class="when">
+        @if (lastChanged(); as when) { Last changed {{ when }} } @else { Server default }
+      </span>
+    </dd>
+  </dl>
+
+  <form (submit)="save($event)">
+    <p id="provider-label" class="label">Provider</p>
+    <mat-radio-group
+      class="providers"
+      aria-labelledby="provider-label"
+      [formField]="form.provider"
+      (change)="chooseProvider($event)"
+    >
+      @for (option of options(); track option.id) {
+      <div class="provider">
+        <mat-radio-button
+          [value]="option.id"
+          [disabled]="!option.configured"
+          [aria-describedby]="option.configured ? '' : 'hint-' + option.id"
+          >{{ option.label }}</mat-radio-button
+        >
+        @if (!option.configured) {
+        <span class="hint" [id]="'hint-' + option.id">Not available: no API key on the server</span>
+        }
+      </div>
+      }
+    </mat-radio-group>
+
+    <mat-form-field appearance="outline" class="model">
+      <mat-label>Model</mat-label>
+      <mat-select [formField]="form.model">
+        @for (model of models(); track model.id) {
+        <mat-option [value]="model.id">{{ model.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <div class="actions">
+      <button matButton="filled" type="submit" [disabled]="!changed() || saving()">Save</button>
+      @if (saving()) {
+      <mat-spinner diameter="20" aria-hidden="true" />
+      }
+    </div>
+
+    <p class="saved" role="status">{{ saved() }}</p>
+    @if (saveError(); as error) {
+    <p class="error" role="alert">{{ error }}</p>
+    }
+  </form>
+  }
+</section>

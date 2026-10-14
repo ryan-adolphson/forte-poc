@@ -9,11 +9,13 @@ describe('validateEnv', () => {
   });
 
   it('applies defaults', () => {
-    expect(validateEnv({ DATABASE_URL, GEMINI_API_KEY: '' })).toEqual({
+    expect(validateEnv({ DATABASE_URL, GEMINI_API_KEY: '', ANTHROPIC_API_KEY: ' ' })).toEqual({
       port: 3000,
       databaseUrl: DATABASE_URL,
       geminiApiKey: undefined,
       geminiModel: 'gemini-3.8-flash',
+      anthropicApiKey: undefined,
+      claudeModel: 'claude-sonnet-5-5',
       chatRateLimit: 10,
       chatRateTtlSeconds: 60,
       trustProxy: 0,
@@ -31,11 +33,15 @@ describe('validateEnv', () => {
       DATABASE_URL,
       PORT: '4000',
       GEMINI_API_KEY: 'key',
+      ANTHROPIC_API_KEY: 'claude-key',
+      CLAUDE_MODEL: 'claude-other',
       CHAT_RATE_LIMIT: '5',
     });
     expect(config).toMatchObject({
       port: 4000,
       geminiApiKey: 'key',
+      anthropicApiKey: 'claude-key',
+      claudeModel: 'claude-other',
       chatRateLimit: 5,
     });
   });

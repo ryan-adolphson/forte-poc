@@ -73,6 +73,8 @@ describe('Chat', () => {
       role: 'assistant',
       text: 'We stock C24 and GL28h.',
       sources: [],
+      provider: 'gemini',
+      model: 'gemini-test',
     });
   });
 
