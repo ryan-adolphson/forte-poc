@@ -87,7 +87,10 @@ export interface DataSheetReference {
  */
 export type ChatSource =
   | {
-      /** The current revision of a product data sheet. */
+      /**
+       * The current revision of a product data sheet: the source shown for a product that
+       * has one, whether the answer was read from the sheet or from the catalogue.
+       */
       kind: 'datasheet';
       sku: string;
       productName: string;
@@ -104,15 +107,13 @@ export type ChatSource =
       url: string;
     }
   | {
-      /** A product's entry in the catalogue. */
+      /**
+       * A product's entry in the catalogue. Sent only for a product that has no data sheet:
+       * a product that has one is shown as its `datasheet` source instead.
+       */
       kind: 'catalogue';
       sku: string;
       productName: string;
-      /**
-       * The product's current data sheet, when it has one: the document of record for the
-       * product. The answer was read from the catalogue, not from this document.
-       */
-      dataSheet?: DataSheetReference;
     };
 
 export type ChatErrorCode =

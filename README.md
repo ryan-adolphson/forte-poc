@@ -99,6 +99,55 @@ Things to know:
 - The API sits behind one proxy, so Compose sets `TRUST_PROXY=1` to rate limit by the client's
   address instead of nginx's. On Docker Desktop every browser on the host still shares one address.
 
+## Deploy to a Droplet
+
+One small server runs the same Compose stack, with Caddy in front for HTTPS:
+
+```
+browser --HTTPS--> caddy (80/443) --> web (nginx) --> api --> postgres
+```
+
+`compose.prod.yaml` adds Caddy and the HTTPS settings on top of `compose.yaml`. The images are
+built on the server from a copy of this repository; there is no registry.
+
+Once:
+
+1. Create a DigitalOcean Droplet (Ubuntu LTS, 1 GB RAM, 25 GB disk) with your SSH key.
+2. Point a hostname at its IP address, for example a free one from <https://www.duckdns.org>.
+3. Prepare the server (swap, Docker, firewall, `/opt/forte`):
+   `ssh root@<host> 'bash -s' < deploy/server-setup.sh`
+4. On the server, create two files by hand. They are never copied from your machine and never
+   overwritten by a deploy.
+   - `/opt/forte/.env` with one line: `SITE_HOST=<your hostname>`
+   - `/opt/forte/apps/api/.env` with `GEMINI_API_KEY`, `AUTH_USERNAME`, `AUTH_PASSWORD` and
+     `SESSION_SECRET` (generate one with `openssl rand -hex 32`). Then `chmod 600` both files.
+
+Every deploy, from the repository root on your machine:
+
+```bash
+deploy/deploy.sh root@<host>
+```
+
+It copies the working tree (not only what is committed) to `/opt/forte`, builds the images one at
+a time, starts the stack and waits until it is healthy. The first build takes several minutes on
+1 GB. Caddy gets its certificate on the first start; ports 80 and 443 must be reachable.
+
+On the server, from `/opt/forte`:
+
+```bash
+docker compose -f compose.yaml -f compose.prod.yaml ps -a
+docker compose -f compose.yaml -f compose.prod.yaml logs -f caddy api
+```
+
+Things to know:
+
+- `SITE_HOST=localhost docker compose -f compose.yaml -f compose.prod.yaml up --build -d --wait`
+  runs the same thing locally on <https://localhost> with a self-signed certificate.
+- The API sits behind two proxies here, so the overlay sets `TRUST_PROXY=2`, and `COOKIE_SECURE=true`.
+- Each deploy re-runs the migrations, the seed and the data sheet ingest. All three are safe to repeat.
+- The database lives in the `postgres-data` volume on the server and is not backed up.
+  `docker compose down -v` deletes it.
+
 ## Chat endpoint
 
 `POST /api/chat/stream` takes `{ "message": "...", "previousInteractionId": "..." }` and answers
@@ -163,8 +212,8 @@ manufacturer's data sheets. Two products are marked hidden from the assistant.
 [sample-documents/manifest.json](sample-documents/manifest.json) lists 23 one-page PDFs: one data
 sheet per assistant-visible product, and two products with revisions A to C whose older values
 differ on purpose. The assistant reads only the current revision of each, and each answer lists
-its sources. Every source shows a data sheet revision: a data sheet source its own, a catalogue
-source the current data sheet of that product. `GET /api/documents/<document number>/file` serves the current PDF, for example
+its sources. Each product is listed once: as its current data sheet, with the
+revision, when it has one, and as a catalogue entry only when it has none. `GET /api/documents/<document number>/file` serves the current PDF, for example
 <http://localhost:3000/api/documents/DS-FRT-CON-C3240/file>.
 
 ## Adding a chat tool

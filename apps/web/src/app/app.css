@@ -35,13 +35,13 @@
   min-height: 0;
 }
 
-/* The chat panel: about 450px on a wide screen, the whole width on a phone. */
+/* The chat panel: 550px on a wide screen, the whole width on a narrower one. */
 .panel {
-  width: min(100vw, 28rem);
+  width: min(100vw, 34.375rem);
   --mat-sidenav-container-text-color: var(--mat-sys-on-surface);
 }
 
-@media (max-width: 28rem) {
+@media (max-width: 34.375rem) {
   .panel {
     --mat-sidenav-container-shape: 0;
   }

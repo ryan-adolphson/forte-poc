@@ -3,37 +3,22 @@ import type { ChatSource } from '@forte/chat-contract';
 import { formatIssueDate, isDocumentUrl } from './document-link';
 
 interface SourceLine {
-  /** Plain text in front of the data sheet: the catalogue entry. Empty for a data sheet source. */
   text: string;
-  /** A data sheet at its revision. A link to the PDF when the URL is safe, otherwise text. */
-  sheet: { text: string; label: string; href: string | null } | null;
+  /** Set for a data sheet whose URL is safe: the line is then a link to the PDF. */
+  href: string | null;
 }
 
 function toLine(source: ChatSource): SourceLine {
-  if (source.kind === 'datasheet') {
-    const text = `${source.productName} data sheet · ${reference(source)}`;
-    return { text: '', sheet: { text, label: text, href: safeHref(source.url) } };
+  if (source.kind === 'catalogue') {
+    // A product without a data sheet: there is nothing to open.
+    return { text: `Product catalogue · ${source.productName} · ${source.sku}`, href: null };
   }
-  const { dataSheet } = source;
   return {
-    text: `Product catalogue · ${source.productName} · ${source.sku}`,
-    // The product's current data sheet: named with its revision, under the catalogue entry.
-    sheet: dataSheet
-      ? {
-          text: `Current data sheet · ${reference(dataSheet)}`,
-          label: `${source.productName} current data sheet · ${reference(dataSheet)}`,
-          href: safeHref(dataSheet.url),
-        }
-      : null,
+    text:
+      `${source.productName} data sheet · ${source.documentNumber} · Rev ${source.revision}` +
+      ` · issued ${formatIssueDate(source.issueDate)}`,
+    href: isDocumentUrl(source.url) ? source.url : null,
   };
-}
-
-function reference(sheet: { documentNumber: string; revision: string; issueDate: string }): string {
-  return `${sheet.documentNumber} · Rev ${sheet.revision} · issued ${formatIssueDate(sheet.issueDate)}`;
-}
-
-function safeHref(url: unknown): string | null {
-  return isDocumentUrl(url) ? url : null;
 }
 
 /** The citations under a completed answer: what the server says the answer drew on. */
@@ -44,21 +29,16 @@ function safeHref(url: unknown): string | null {
     <ul>
       @for (line of lines(); track $index) {
         <li>
-          @if (line.text) {
-            <span class="entry">{{ line.text }}</span>
-          }
-          @if (line.sheet; as sheet) {
-            @if (sheet.href) {
-              <a
-                target="_blank"
-                rel="noopener"
-                [href]="sheet.href"
-                [attr.aria-label]="sheet.label + ' (PDF, opens in a new tab)'"
-                >{{ sheet.text }}<span class="badge" aria-hidden="true">PDF</span></a
-              >
-            } @else {
-              {{ sheet.text }}
-            }
+          @if (line.href) {
+            <a
+              target="_blank"
+              rel="noopener"
+              [href]="line.href"
+              [attr.aria-label]="line.text + ' (PDF, opens in a new tab)'"
+              >{{ line.text }}<span class="badge" aria-hidden="true">PDF</span></a
+            >
+          } @else {
+            {{ line.text }}
           }
         </li>
       }
@@ -89,11 +69,6 @@ function safeHref(url: unknown): string | null {
     li {
       /* Long product names and document numbers wrap instead of widening the bubble. */
       overflow-wrap: anywhere;
-    }
-
-    .entry {
-      /* A catalogue entry's data sheet goes on the line below it. */
-      display: block;
     }
 
     a {
