@@ -7,8 +7,6 @@ import { MatProgressSpinnerHarness } from '@angular/material/progress-spinner/te
 import type { ChatSource } from '@forte/chat-contract';
 import {
   CATALOGUE_ENTRY,
-  CATALOGUE_ENTRY_WITH_SHEET,
-  DATA_SHEET_REFERENCE,
   DATA_SHEET,
   FakeStream,
   done,
@@ -328,48 +326,13 @@ describe('ChatPanel', () => {
       expect(link.querySelector('.badge')!.getAttribute('aria-hidden')).toBe('true');
     });
 
-    it('shows a catalogue source without a data sheet as text, not a link', async () => {
+    it('shows a catalogue source, a product without a data sheet, as text and not a link', async () => {
       await answer([CATALOGUE_ENTRY]);
 
       expect(items()).toEqual(['Product catalogue · Ready-Mix Concrete C32/40 · FRT-CON-C3240']);
       expect(root.querySelector('app-chat-sources a')).toBeNull();
       expect(root.querySelector('app-chat-sources button')).toBeNull();
     });
-
-    it("shows a catalogue source's current data sheet with its revision, linked to the PDF", async () => {
-      await answer([CATALOGUE_ENTRY_WITH_SHEET]);
-
-      expect(items()).toEqual([
-        // Two lines on screen: the entry is a block, the link follows it.
-        'Product catalogue · Ready-Mix Concrete C32/40 · FRT-CON-C3240' +
-          'Current data sheet · DS-FRT-CON-C3240 · Rev C · issued 19 Jan 2026PDF',
-      ]);
-      const links = root.querySelectorAll<HTMLAnchorElement>('app-chat-sources a');
-      expect(links).toHaveLength(1);
-      // The link is the data sheet only: the catalogue entry itself stays plain text.
-      expect(links[0].textContent).toBe('Current data sheet · DS-FRT-CON-C3240 · Rev C · issued 19 Jan 2026PDF');
-      expect(links[0].getAttribute('href')).toBe('/api/documents/DS-FRT-CON-C3240/file');
-      expect(links[0].target).toBe('_blank');
-      expect(links[0].rel).toBe('noopener');
-      expect(links[0].getAttribute('aria-label')).toBe(
-        'Ready-Mix Concrete C32/40 current data sheet · DS-FRT-CON-C3240 · Rev C · issued 19 Jan 2026 (PDF, opens in a new tab)',
-      );
-      expect(links[0].querySelector('.badge')!.getAttribute('aria-hidden')).toBe('true');
-    });
-
-    it.each(['https://evil.example/x', 'javascript:alert(1)', '//evil.example/api/documents/x/file', ''])(
-      "shows a catalogue source's data sheet as text when its url is %j",
-      async (url) => {
-        await answer([{ ...CATALOGUE_ENTRY, dataSheet: { ...DATA_SHEET_REFERENCE, url } } as ChatSource]);
-
-        expect(root.querySelector('app-chat-sources a')).toBeNull();
-        expect(root.querySelector('app-chat-sources')!.innerHTML).not.toContain('evil');
-        expect(items()).toEqual([
-          'Product catalogue · Ready-Mix Concrete C32/40 · FRT-CON-C3240 ' +
-            'Current data sheet · DS-FRT-CON-C3240 · Rev C · issued 19 Jan 2026',
-        ]);
-      },
-    );
 
     it('shows no block for an answer without sources', async () => {
       await answer([]);

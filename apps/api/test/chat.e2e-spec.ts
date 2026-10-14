@@ -74,19 +74,18 @@ describe('POST /api/chat/stream', () => {
         data: {
           interactionId: 'v1_b',
           usage: { inputTokens: 14, outputTokens: 24, totalTokens: 38 },
-          // A catalogue answer, with the current revision of the product's data sheet
+          // A catalogue answer for a product that has a data sheet: the one source is that
+          // data sheet at its current revision, and there is no catalogue source
           // (needs the ingested data sheets: `npm run db:ingest-docs -w api`).
           sources: [
             {
-              kind: 'catalogue',
+              kind: 'datasheet',
               sku: 'FRT-CON-C3240',
               productName: 'Ready-Mix Concrete C32/40',
-              dataSheet: {
-                documentNumber: 'DS-FRT-CON-C3240',
-                revision: 'C',
-                issueDate: '2026-01-19',
-                url: '/api/documents/DS-FRT-CON-C3240/file',
-              },
+              documentNumber: 'DS-FRT-CON-C3240',
+              revision: 'C',
+              issueDate: '2026-01-19',
+              url: '/api/documents/DS-FRT-CON-C3240/file',
             },
           ],
         },

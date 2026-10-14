@@ -212,8 +212,8 @@ manufacturer's data sheets. Two products are marked hidden from the assistant.
 [sample-documents/manifest.json](sample-documents/manifest.json) lists 23 one-page PDFs: one data
 sheet per assistant-visible product, and two products with revisions A to C whose older values
 differ on purpose. The assistant reads only the current revision of each, and each answer lists
-its sources. Every source shows a data sheet revision: a data sheet source its own, a catalogue
-source the current data sheet of that product. `GET /api/documents/<document number>/file` serves the current PDF, for example
+its sources. Each product is listed once: as its current data sheet, with the
+revision, when it has one, and as a catalogue entry only when it has none. `GET /api/documents/<document number>/file` serves the current PDF, for example
 <http://localhost:3000/api/documents/DS-FRT-CON-C3240/file>.
 
 ## Adding a chat tool

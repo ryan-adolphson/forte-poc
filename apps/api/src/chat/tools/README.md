@@ -25,7 +25,8 @@ sees, and a `run` handler. `index.ts` lists them in `chatTools`.
      single intentional lookup. They become the citations shown under the answer and are
      never sent to the model. A catalogue source takes the product's current data sheet
      reference from `documents.getCurrentReferences(skus)` (one query for any number of
-     SKUs), so every citation carries a revision.
+     SKUs). `selectSources` then shows a product that has a data sheet as that data sheet,
+     once, and shows a catalogue line only for a product without one.
 3. Add it to the `chatTools` array in `index.ts`. Nothing else needs wiring: the request
    builder (`../gemini.ts`) sends every declaration on every request and the loop
    (`../chat.service.ts`) dispatches by name.

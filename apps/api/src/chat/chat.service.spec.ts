@@ -30,11 +30,13 @@ const dataSheet = {
 
 /** The same sheet as the catalogue tools see it: the reference only. */
 const reference = { documentNumber: 'DS-FRT-CON-C3240', revision: 'C', issueDate: '2026-01-19' };
-const CATALOGUE_SOURCE = {
-  kind: 'catalogue',
+/** The one source shown for this product, whichever tool read it: its current data sheet. */
+const DATA_SHEET_SOURCE = {
+  kind: 'datasheet',
   sku: 'FRT-CON-C3240',
   productName: 'Ready-Mix Concrete C32/40',
-  dataSheet: { ...reference, url: '/api/documents/DS-FRT-CON-C3240/file' },
+  ...reference,
+  url: '/api/documents/DS-FRT-CON-C3240/file',
 };
 
 function setup(gemini: GeminiStream | null) {
@@ -192,8 +194,8 @@ describe('ChatService.run', () => {
           interactionId: 'v1_b',
           usage: { inputTokens: 14, outputTokens: 24, totalTokens: 38 },
           // The answer names no product, so the one that was fetched on purpose is the source.
-          // It carries the revision of the product's current data sheet.
-          sources: [CATALOGUE_SOURCE],
+          // It has a data sheet, so that is what is shown, built from the tool's reference.
+          sources: [DATA_SHEET_SOURCE],
         },
       },
     ]);
@@ -219,15 +221,6 @@ describe('ChatService.run', () => {
   });
 
   describe('sources', () => {
-    const DATA_SHEET_SOURCE = {
-      kind: 'datasheet',
-      sku: 'FRT-CON-C3240',
-      productName: 'Ready-Mix Concrete C32/40',
-      documentNumber: 'DS-FRT-CON-C3240',
-      revision: 'C',
-      issueDate: '2026-01-19',
-      url: '/api/documents/DS-FRT-CON-C3240/file',
-    };
     const call = (id: string, name: string, argumentsJson: string) => ({ id, name, argumentsJson });
 
     it('gives the model the data sheet and cites it in done, built from the tool result', async () => {
@@ -256,7 +249,7 @@ describe('ChatService.run', () => {
       expect(JSON.stringify(events.slice(0, -1))).not.toContain('sources');
     });
 
-    it('collects over several tool rounds and puts the data sheet before the catalogue product', async () => {
+    it('collects over several tool rounds and shows one product once, as its data sheet', async () => {
       const gemini = fakeGemini(
         functionCallTurn('v1_a', [call('call_1', 'get_product', '{"sku":"FRT-CON-C3240"}')]),
         functionCallTurn('v1_b', [call('call_2', 'get_data_sheet', '{"sku":"FRT-CON-C3240"}')]),
@@ -266,16 +259,9 @@ describe('ChatService.run', () => {
 
       const done = (await collect(service)).at(-1);
 
-      expect(done).toMatchObject({
-        event: 'done',
-        data: {
-          sources: [
-            DATA_SHEET_SOURCE,
-            // Fetched on purpose, so it stays, and it names the same current sheet.
-            CATALOGUE_SOURCE,
-          ],
-        },
-      });
+      expect(done).toMatchObject({ event: 'done' });
+      // get_product and get_data_sheet both ran: one source, not the sheet twice.
+      expect(done!.data).toHaveProperty('sources', [DATA_SHEET_SOURCE]);
     });
 
     it('cites a catalogue product without dataSheet when it has no data sheet, or the lookup finds none', async () => {

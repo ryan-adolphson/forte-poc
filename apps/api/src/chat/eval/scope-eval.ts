@@ -32,8 +32,8 @@ type EvalCase = {
   mustMatch?: RegExp[];
   /**
    * What `done.sources` must be: `'none'` for an empty list, or a data sheet that must be
-   * in it at this revision, as a data sheet source or as the `dataSheet` of a catalogue
-   * source. Either way, no data sheet may be cited at any other revision of that document.
+   * in it as a data sheet source at this revision and at no other. A product with a data
+   * sheet is shown as that sheet, so there must be no catalogue source for the same SKU.
    */
   sources?: 'none' | { documentNumber: string; revision: string };
 };
@@ -50,7 +50,8 @@ const cases: EvalCase[] = [
     message: 'What is the compressive strength of your C32/40 concrete?',
     tools: 'required',
     mustContain: ['40', 'MPa', 'FRT-CON-C3240'],
-    // Whether it read the catalogue or the sheet, the citation carries the revision in force.
+    // Whether it read the catalogue or the sheet, the citation carries the revision in force,
+    // and the one source is the data sheet: no catalogue source for FRT-CON-C3240.
     mustMatch: [/Rev(ision)?\.? C\b/i],
     sources: { documentNumber: 'DS-FRT-CON-C3240', revision: 'C' },
   },
@@ -243,12 +244,14 @@ function check(
   }
   if (typeof testCase.sources === 'object') {
     const { documentNumber, revision } = testCase.sources;
-    const cited = sources
-      .map((source) => (source.kind === 'datasheet' ? source : source.dataSheet))
-      .filter((sheet) => sheet?.documentNumber === documentNumber);
+    const cited = sources.filter((source) => source.kind === 'datasheet' && source.documentNumber === documentNumber);
     if (cited.length === 0 && testCase.tools === 'required') failures.push(`no source for ${documentNumber}`);
-    if (cited.some((sheet) => sheet?.revision !== revision)) {
+    if (cited.some((sheet) => sheet.kind === 'datasheet' && sheet.revision !== revision)) {
       failures.push(`${documentNumber} cited at a revision other than ${revision}`);
+    }
+    const skus = new Set(cited.map((sheet) => sheet.sku));
+    if (sources.some((source) => source.kind === 'catalogue' && skus.has(source.sku))) {
+      failures.push(`catalogue source shown next to ${documentNumber}`);
     }
   }
   return failures;
