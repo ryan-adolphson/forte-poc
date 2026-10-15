@@ -231,6 +231,14 @@ its sources. Each product is listed once: as its current data sheet, with the
 revision, when it has one, and as a catalogue entry only when it has none. `GET /api/documents/<document number>/file` serves the current PDF, for example
 <http://localhost:3000/api/documents/DS-FRT-CON-C3240/file>.
 
+## Updating dependencies
+
+`npm run verify` runs every check in the repo (API lint, build, unit and e2e tests, web build and
+tests, browser tests) and stops at the first failure; it needs the database up. In Claude Code, ask
+the `dependency-manager` agent to "audit and update the dependencies": it applies security fixes and
+patch/minor updates in small batches, runs `npm run verify` after each, reverts any batch that
+breaks, and proposes major upgrades for you to approve. Changes are left uncommitted for review.
+
 ## Browser tests
 
 Playwright tests live in `tests/`, test plans in `specs/`. Install the browser once:

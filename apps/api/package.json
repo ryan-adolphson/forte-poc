@@ -42,11 +42,11 @@
     "@types/node": "^24.19.2",
     "@types/supertest": "^7.2.1",
     "dotenv": "^17.4.2",
-    "oxlint": "^1.87.0",
+    "oxlint": "^1.88.0",
     "oxlint-tsgolint": "^7.0.2004",
     "prisma": "8.0.0-rc.22",
     "supertest": "^7.3.1",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.4"
+    "vitest": "^5.0.5"
   }
 }

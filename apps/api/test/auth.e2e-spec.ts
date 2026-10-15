@@ -1,30 +1,15 @@
 import type { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
-import { AppModule } from '../src/app.module.js';
 import { SESSION_COOKIE } from '../src/auth/session-token.js';
-import { GEMINI_STREAM } from '../src/chat/gemini.js';
-import { appConfig, validateEnv, type AppConfig } from '../src/config/app.config.js';
-import { configureApp } from '../src/configure-app.js';
+import { appConfig, type AppConfig } from '../src/config/app.config.js';
+import { createApp } from './chat-app.js';
 import { fakeGemini, textTurn } from './fake-gemini.js';
 import { signIn } from './sign-in.js';
 
-// The Gemini seam is replaced by a fake, so no test here calls the real model.
-async function createApp(gemini: ReturnType<typeof fakeGemini>, override: Partial<AppConfig> = {}) {
-  const app: INestApplication<App> = (
-    await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(GEMINI_STREAM)
-      .useValue(gemini.stream)
-      .overrideProvider(appConfig.KEY)
-      // AppModule's ConfigModule has already loaded .env into process.env.
-      .useValue({ ...validateEnv(process.env), ...override })
-      .compile()
-  ).createNestApplication();
-  configureApp(app);
-  await app.init();
-  return app;
-}
+// No test here calls a real model, and none reads the shared assistant-setting row:
+// `createApp` gives fake models and an in-memory setting with nothing saved, so every chat
+// turn goes to the fake Gemini whatever is saved in the database.
 
 /** The username and password from apps/api/.env. The tests never spell them out. */
 function credentials(app: INestApplication) {
@@ -198,7 +183,7 @@ describe('chat rate limit and sign-in', () => {
   const gemini = fakeGemini(textTurn('v1_a', ['ok']));
 
   beforeAll(async () => {
-    app = await createApp(gemini, { chatRateLimit: 1 });
+    app = await createApp(gemini, 1);
   });
 
   afterAll(async () => {
@@ -223,7 +208,7 @@ describe('POST /api/auth/login rate limit', () => {
   let app: INestApplication<App>;
 
   beforeAll(async () => {
-    app = await createApp(fakeGemini(textTurn('v1_a', ['ok'])), { loginRateLimit: 2 });
+    app = await createApp(fakeGemini(textTurn('v1_a', ['ok'])), undefined, undefined, { loginRateLimit: 2 });
   });
 
   afterAll(async () => {
@@ -258,7 +243,7 @@ describe('sign-in not configured', () => {
   let app: INestApplication<App>;
 
   beforeAll(async () => {
-    app = await createApp(fakeGemini(textTurn('v1_a', ['ok'])), { authPassword: undefined });
+    app = await createApp(fakeGemini(textTurn('v1_a', ['ok'])), undefined, undefined, { authPassword: undefined });
   });
 
   afterAll(async () => {

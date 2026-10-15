@@ -14,7 +14,9 @@
     "api:dev": "npm run start:dev -w api",
     "web:dev": "npm run start -w web",
     "e2e": "playwright test",
-    "e2e:ui": "playwright test --ui"
+    "e2e:ui": "playwright test --ui",
+    "verify": "npm run lint -w api && npm run build -w api && npm test -w api && npm run test:e2e -w api && npm run build -w web && npm run test -w web -- --watch=false && npm run e2e",
+    "verify:docker": "docker compose build"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1"
