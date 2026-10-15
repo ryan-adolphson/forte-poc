@@ -231,6 +231,30 @@ its sources. Each product is listed once: as its current data sheet, with the
 revision, when it has one, and as a catalogue entry only when it has none. `GET /api/documents/<document number>/file` serves the current PDF, for example
 <http://localhost:3000/api/documents/DS-FRT-CON-C3240/file>.
 
+## Browser tests
+
+Playwright tests live in `tests/`, test plans in `specs/`. Install the browser once:
+
+```bash
+npx playwright install chromium
+```
+
+Then, with the database up (`npm run db:up`):
+
+```bash
+npm run e2e                                  # starts or reuses the API and web dev servers
+BASE_URL=http://localhost:8088 npm run e2e   # against the Docker stack instead
+npm run e2e:ui                               # Playwright UI mode
+```
+
+The tests sign in with `AUTH_USERNAME` / `AUTH_PASSWORD` from `apps/api/.env`. Reports go to
+`playwright-report/` (git-ignored). Read [tests/README.md](tests/README.md) before writing a test:
+it covers the canned chat stream, the shared model setting and the sign-in rate limit.
+
+Claude Code has three Playwright agents (`playwright-test-planner`, `playwright-test-generator`,
+`playwright-test-healer`) that use the `playwright-test` MCP server in `.mcp.json`. After upgrading
+`@playwright/test`, rerun `npx playwright init-agents --loop=claude`.
+
 ## Adding a chat tool
 
 The assistant can only use facts returned by its tools. To give it a new one, follow
