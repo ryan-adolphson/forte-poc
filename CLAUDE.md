@@ -77,6 +77,11 @@ Run from the repo root unless noted.
 - Prisma is version 8 (release candidate), not classic Prisma. There is no `schema.prisma`, `PrismaClient`, `prisma generate` or `migrate dev`. Use the `prisma-8` skill in `apps/api/.claude/skills/`.
 - Run `npm install` from the repo root with `-w api` or `-w web`, never inside an app folder.
 - The global `ng` CLI is older than the workspace. Use `npx ng` from `apps/web`.
+- Create new Angular pieces (components, services, guards, interceptors, pipes, directives) with the Angular CLI from `apps/web`, then fill them in. Do not hand-write those files.
+  - Always pass `--flat` so files land directly in `src/app`, matching the existing layout: `NG_CLI_ANALYTICS=false npx ng generate component settings-page --flat`. The variable stops the CLI waiting on an analytics prompt. Use `--dry-run` first if unsure where files will go.
+  - For a small component, add `--inline-template --inline-style` to keep it in one `.ts` file, as `product-card.ts` and `product-icon.ts` are.
+  - Plain TypeScript helpers (such as `filter-products.ts`, `category-label.ts`) and test fixtures in `src/testing/` have no CLI generator: write those by hand.
+  - Never let the CLI run an install inside `apps/web`.
 - Never put the sign-in username or password in code, tests, placeholders or committed files; they live only in the git-ignored `apps/api/.env`. API e2e tests need them set there and sign in with `signIn(app)` from `test/sign-in.ts`; web specs that render the routes or the shell add `provideSignedIn()` from `src/testing/auth.ts`.
 - New API routes are closed by default. Add `@Public()` only on purpose.
 - Without `SESSION_SECRET`, sessions end when the API restarts. Cookies are not scoped by port, so the dev stack (:4200) and the Docker stack (:8088) overwrite each other's session.
